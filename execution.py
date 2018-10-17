@@ -6,10 +6,6 @@ Created on Sun May 14 20:10:12 2017
 @author: seniortasse
 
 """
-
-
-
-
 """
 NOTE:
     The space below is dedicated to test our code by creating objects, calling methods,
@@ -21,13 +17,12 @@ Database is a class from the module contextionaryDatabase. The class Database he
 database for the program, called "contextionary". The "contextionary" database contains 8 tables as of now.
 """
 
-
 from contextionaryDatabase import Database
 
-libraryName="Human activity"
-projectPath="/home/dev/WorkSpace/contextionary 0.0"
-phraseLength=2
-db=Database(libraryName,phraseLength,projectPath)
+libraryName = "Human activity"
+projectPath = "/home/dev/WorkSpace/contextionary 0.0"
+phraseLength = 2
+db = Database(libraryName, phraseLength, projectPath)
 
 
 """

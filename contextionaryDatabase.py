@@ -12,9 +12,9 @@ The action will update the document table and the phrase meaning table (count pe
 for old context and count per context will increase for new context).
 """
 
-password='postgres'
-dbname='contextionary'
-usr='postgres'
+password = 'postgres'
+dbname = 'contextionary'
+usr = 'postgres'
 
 """
 The document class helps collect and file documents in the document table
@@ -22,11 +22,12 @@ according to their context. Each document is assigned to a context.
 Each phrase of a document is counted and the count is updated in the phrase origin table.
 The phrase count per context is updated in the phrase meaning table.
 """
+
+
 class Document(object):
     
-    def __init__(self,doc_id,documentlocation,phraseMaxLength,contextname):
-        
-        
+    def __init__(self, doc_id, documentlocation, phraseMaxLength, contextname):
+
         import os.path
         from textProcessing import TextProcessor
         
@@ -38,15 +39,15 @@ class Document(object):
         --text-- and --phraseMaxLength-- will represent the two arguments needed
         to construct the class
         """
-        self.documentlocation=documentlocation
-        file = open(self.documentlocation, "r",encoding="UTF-8-sig")
-        self.text=file.read()
+        self.documentlocation = documentlocation
+        file = open(self.documentlocation, "r", encoding="UTF-8-sig")
+        self.text = file.read()
         file.close() 
-        self.filename=os.path.basename(self.documentlocation)
-        self.phraseMaxLength=phraseMaxLength
-        self.doc_id=doc_id
-        self.contextname=contextname
-        self.phraseTable=[]
+        self.filename = os.path.basename(self.documentlocation)
+        self.phraseMaxLength = phraseMaxLength
+        self.doc_id = doc_id
+        self.contextname = contextname
+        self.phraseTable = []
         
         """
         Once we have a text, we want to split it in clauses. A sentence is usually divided
@@ -69,10 +70,9 @@ class Document(object):
         phrase length the total number of phrases that exist in the document.
         """
         
-        self.textProcessor=TextProcessor(self.text,self.phraseMaxLength)
+        self.textProcessor = TextProcessor(self.text, self.phraseMaxLength)
         #self.updatePhrase()
 
-    
     def getText(self):
         
         return self.text
@@ -80,8 +80,7 @@ class Document(object):
     def getFileName(self):
         
         return self.filename
-    
-    
+
     def updatePhraseTables(self):
         
         from psycopg2 import connect
@@ -95,7 +94,7 @@ class Document(object):
                 for phrase in self.textProcessor.getPhraseCount()[length].keys():
                     self.phraseTable.append([phrase,length,self.textProcessor.getPhraseCount()[length][phrase]])
                                                       
- # Update phrase table (if there is no such phrase in the table and new document is created)                   
+# Update phrase table (if there is no such phrase in the table and new document is created)
  
                     cur.execute('''SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s;''', (phrase,) )
                     phrase_id = cur.fetchone()
@@ -103,7 +102,7 @@ class Document(object):
                     #if phrase == None or phrase == '' or phrase == ' ':
                     #    phrase_id = 1
 
-                    if phrase_id == None:
+                    if not phrase_id:
                         cur.execute('''
                                     insert into phrase 
                                     ("phrase_text", "phrase_length") 
@@ -118,24 +117,18 @@ class Document(object):
                             
                         cur.execute('''SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s;''', (phrase,))
                         phrase_id = cur.fetchone()
-                  
-                    
-                    
 
                     # Update phrase origin and phrase meaning
                     
                     self.updatePhraseOrigin(phrase_id,phrase,length)
                     self.updatePhraseMeaning(phrase_id)
-                    
-               
-                                   
+
         finally:
             cur.close() 
             con.close() 
-            print ('table phrase updated') 
+            print('table phrase updated')
             #self.updatePhraseMeaning()
-      
-    
+
     def updatePhraseOrigin(self,phrase_id,phrase,length):
         
         from psycopg2 import connect
@@ -145,7 +138,6 @@ class Document(object):
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor()
 
-          
         #cur.execute('''(SELECT Count(*) FROM document)''')
         #doc_id = cur.fetchone()
         cur.execute('''SELECT "phrase_id" FROM "phrase_origin"
@@ -155,7 +147,7 @@ class Document(object):
                             ))
         exists = cur.fetchone()
         
-        if exists == None:
+        if not exists:
             cur.execute('''
                         insert into "phrase_origin" 
                         ("phrase_id", "document_id", "phrase_count_per_document") 
@@ -170,10 +162,9 @@ class Document(object):
         
         cur.close() 
         con.close() 
-        print ('table phrase origin updated')   
-        
-    
-    def updatePhraseMeaning(self,phr_id):
+        print('table phrase origin updated')
+
+    def updatePhraseMeaning(self, phr_id):
         
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -181,11 +172,9 @@ class Document(object):
         con = connect("dbname=%s user=%s password=%s" %(dbname,usr,password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor()
-        
-        
+
         cur.execute("""SELECT "context_id" FROM document WHERE "document_id" = %s;  """,self.doc_id)
         cont_id = cur.fetchone()
-        
 
         # check if exists in phrase meaning
         cur.execute('''SELECT "phrase_id" FROM "phrase_meaning" WHERE 
@@ -196,7 +185,7 @@ class Document(object):
         exist = cur.fetchone()
             
         # not exists
-        if exist == None:
+        if not exist:
             cur.execute('''
                         insert into "phrase_meaning" 
                         ("phrase_id" , 
@@ -209,19 +198,17 @@ class Document(object):
                                 '''
                                 , (phr_id, cont_id[0]) )
                         
-            if phr_id==1:
+            if phr_id == 1:
                 print("first phrase is not yet into phrase meaning table. Just added now at context ID")
                 print(cont_id[0])
-
 
         cur.execute('''SELECT "phrase_count_per_context" FROM "phrase_meaning" WHERE 
                 "phrase_id" = %s 
                 AND "context_id" = %s'''
         ,(phr_id, cont_id[0]))
-        cont_old_count=  cur.fetchone()
-        
-        
-        if phr_id==1:
+        cont_old_count = cur.fetchone()
+
+        if phr_id == 1:
                 print("first phrase old count was:")
                 print(cont_old_count[0])
                 
@@ -230,35 +217,30 @@ class Document(object):
                                     WHERE "phrase_id" = %s AND
                                     "document_id" = %s'''
         ,(phr_id, self.doc_id))
-        doc_count=  cur.fetchone()
+        doc_count = cur.fetchone()
         
-        if phr_id==1:
+        if phr_id == 1:
                 print("first phrase doc count was:")
                 print(doc_count[0])
                 
         cont_new_count=cont_old_count[0]+doc_count[0]
         
-        if phr_id==1:
+        if phr_id == 1:
                 print("first phrase new count is:")
-                print( cont_new_count)
+                print(cont_new_count)
                 
         cur.execute('''
                 UPDATE "phrase_meaning"
                 SET 
                 "phrase_count_per_context" = %s WHERE  "phrase_id" = %s 
                         AND "context_id" = %s
-                ''',(
-        cont_new_count,
-        phr_id,
-        cont_id[0]
-        )
-        )
+                ''', (cont_new_count, phr_id, cont_id[0])
+                    )
         
         cur.close() 
         con.close() 
-        print ('table phrase meaning updated')       
-    
-    
+        print('table phrase meaning updated')
+
     def getPhraseTable(self):
         return self.phraseTable
         
@@ -268,10 +250,9 @@ class Document(object):
         """
         return self.contextname  
     
-    def setID(self,doc_ID):
-        self.doc_ID=doc_ID
+    def setID(self, doc_ID):
+        self.doc_ID = doc_ID
 
-    
     def getID(self):
         return self.doc_id
     
@@ -279,14 +260,11 @@ class Document(object):
         
         return "I am the Document class"
 
-    
-
 
 class Database(object):
     
-    def __init__(self,libraryName,phraseMaximumLength,projectPath):
-    
-        
+    def __init__(self, libraryName, phraseMaximumLength, projectPath):
+
         print("Initializing language universe class.....")
         
         """
@@ -301,17 +279,16 @@ class Database(object):
         text documents (.txt files) and is created from the library name.
         5- the -documents- is the list of all documents
         """
+
+        self.usr ='postgres'
+        self.password = password
+        self.dbname = 'contextionary'
         
-        
-        self.usr='postgres'
-        self.password=password
-        self.dbname='contextionary'
-        
-        self.libraryName=libraryName
-        self.phraseMaximumLength=phraseMaximumLength
-        self.projectPath=projectPath
-        self.libraryFolderPath=self.createLibraryContextPath()        
-        self.documents=[]                 
+        self.libraryName = libraryName
+        self.phraseMaximumLength = phraseMaximumLength
+        self.projectPath = projectPath
+        self.libraryFolderPath = self.createLibraryContextPath()
+        self.documents = []
         
         s = '''Please enter the action required:
             1 - Create database
@@ -342,12 +319,9 @@ class Database(object):
             
         if action == '6':
             self.change_context()
-            
-        
-        
+
     def create(self):
-        
-        
+
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
         
@@ -359,19 +333,16 @@ class Database(object):
         finally:
             cur.close() 
             con.close() 
-            print ('Database %s created.'%self.dbname)
-            
-    
-     
+            print('Database %s created.' % self.dbname)
+
     def createLibraryContextPath(self):
         import os
         from pathlib import Path
         for root, dirs, files in os.walk(self.projectPath):
-                if Path(root).parts[-1]==self.libraryName:
+                if Path(root).parts[-1] == self.libraryName:
                     return root
         return None
-            
-    
+
     def create_tables(self):
         
         from psycopg2 import connect 
@@ -383,16 +354,29 @@ class Database(object):
        
         try:
             
-            cur.execute('''CREATE TABLE context ("context_id" serial PRIMARY KEY, "context_immediate_parent_id" bigint, "context_name" varchar(255), "context_children_id" text, "context_picture" varchar(255))''')
+            cur.execute('''CREATE TABLE context (
+                        "context_id" serial PRIMARY KEY, 
+                        "context_immediate_parent_id" bigint, 
+                        "context_name" varchar(255), 
+                        "context_children_id" text, 
+                        "context_picture" varchar(255))''')
             
-            cur.execute('''CREATE TABLE document ("document_id" serial PRIMARY KEY, "document_title" varchar(255), "context_id" bigint references context("context_id"), "document_content" text)''')
+            cur.execute('''CREATE TABLE document (
+                        "document_id" serial PRIMARY KEY, 
+                        "document_title" varchar(255), 
+                        "context_id" bigint references context("context_id"), 
+                        "document_content" text)''')
             
             ######### revised 06/04/2018
-            cur.execute('''CREATE TABLE phrase ("phrase_id" serial PRIMARY KEY, "phrase_text" varchar(255), "phrase_length" smallint, "red_flag" smallint)''')
+            cur.execute('''CREATE TABLE phrase (
+                        "phrase_id" serial PRIMARY KEY, 
+                        "phrase_text" varchar(255), 
+                        "phrase_length" smallint, 
+                        "red_flag" smallint)''')
             #########
             
-            cur.execute('''CREATE TABLE "phrase_origin" 
-                        ("phrase_id" bigint references phrase("phrase_id"),
+            cur.execute('''CREATE TABLE "phrase_origin" (
+                        "phrase_id" bigint references phrase("phrase_id"),
                         "document_id" bigint references document("document_id"), 
                         "phrase_count_per_document" integer, 
                         PRIMARY KEY ("phrase_id", "document_id"))''')
@@ -419,7 +403,6 @@ class Database(object):
                         PRIMARY KEY ("phrase_id", "context_id")
                         )''')
 
-            
             cur.execute('''CREATE TABLE "phrase_vector_space" (
                         "phrase_id" bigint references phrase("phrase_id"), 
                         "context_id" bigint references context("context_id"), 
@@ -487,8 +470,7 @@ class Database(object):
                         "similarity_index" bigint,
                         PRIMARY KEY ("phrase_id", "similar_spelling_phrase_id")
                         )''')
-            
-            
+
             cur.execute('''CREATE TABLE "phrase_frequency_and_distance" (
                         "phrase_id" bigint references phrase("phrase_id"), 
                         "context_id" bigint references context("context_id"), 
@@ -532,9 +514,7 @@ class Database(object):
         finally:
             cur.close() 
             con.close() 
-            print ('tables created')
-        
-        
+            print('tables created')
       
     def add_entry(self):
         
@@ -548,7 +528,7 @@ class Database(object):
         print(s1)
         table = input()
         con = None 
-        con = connect("dbname=contextionary user=postgres password=%s" %(password))
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor() 
         try:
@@ -558,27 +538,28 @@ class Database(object):
                 xl = pd.ExcelFile(file)
                 print(xl.sheet_names)
                 df1 = xl.parse('Context hierarchy table')
-                for i in range(0,len(df1)):
+                for i in range(0, len(df1)):
     
                     cur.execute('''insert into context 
                     ("context_id", "context_immediate_parent_id", "context_name", "context_children_id") 
                     VALUES (%s, %s, %s, %s)''', (
-                    int(df1["context_id"][i]) , 
+                    int(df1["context_id"][i]),
                     int(df1["context_immediate_parent_id"][i]),
                     df1["context_name"][i],
-                    str(df1["context_children_id"][i]) ) )
+                    str(df1["context_children_id"][i])))
                     
             if table == '2':
                 self.add_documents()     
             
             if table == '3':
-                cur.execute('insert into phrase ("phrase_id", "document_id", "phrase_text", "phrase_length", "phrase_count_per_document") VALUES ((SELECT count(*) FROM phrase) + 1, 1, 214234, 50, 23)')
+                cur.execute('insert into phrase ('
+                            '"phrase_id", "document_id", "phrase_text", "phrase_length", '
+                            '"phrase_count_per_document") VALUES ((SELECT count(*) FROM phrase) + 1, 1, 214234, 50, 23)')
         finally:
             cur.close() 
             con.close() 
             print ('table updated')
-    
-    
+
     def add_documents(self):
         
         print("Updating documents.....")
@@ -589,15 +570,12 @@ class Database(object):
         print(self.libraryFolderPath)
         
         for root, dirs, files in os.walk(self.libraryFolderPath):
-            
-            
-            rootdirname=Path(root).parts[-1] 
-            
-  
+            rootdirname = Path(root).parts[-1]
+
             from psycopg2 import connect
             from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
             con = None 
-            con = connect("dbname=contextionary user=postgres password=%s" %(password))
+            con = connect("dbname=contextionary user=postgres password=%s" % password)
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
             cur = con.cursor()
             
@@ -610,33 +588,29 @@ class Database(object):
             childlist = cur.fetchone()
             
             try:
-                
-                #if context exists in database and has no child, then we look into its .txt files
+                # if context exists in database and has no child, then we look into its .txt files
                 if (dircount[0] > 0) and (childlist[0] == '0'):
                     for name in files:
              
                         if name.endswith(".txt") and name.startswith("0_"):
 
+                            # cur.execute('''(SELECT Count(*) FROM document)''')
+                            # doc_id = cur.fetchone()
                             
-                            #cur.execute('''(SELECT Count(*) FROM document)''')
-                            #doc_id = cur.fetchone()
-                            
-                            dummytitle="_"
+                            dummytitle = "_"
                             cur.execute('''
                             insert into document 
                             ("document_title", "context_id", "document_content") 
                             VALUES (
                             %s, 
                             %s,
-                            %s)''', (dummytitle,1,1))
-                            
-                            
+                            %s)''', (dummytitle, 1, 1))
+
                             cur.execute("""SELECT "document_id" FROM document WHERE "document_title"=%s;""" , ([dummytitle]),)
                             doc_id = cur.fetchone()
-                            
-                            
-                            filelocation= os.path.join(root, name) 
-                            document=Document(doc_id,filelocation,self.phraseMaximumLength,rootdirname)
+
+                            filelocation = os.path.join(root, name)
+                            document = Document(doc_id, filelocation, self.phraseMaximumLength, rootdirname)
                             self.documents.append(document)
                             
                             os.rename(filelocation, root + '/' + '1' + name[1:])
@@ -654,11 +628,9 @@ class Database(object):
                             "document_title" = %s, 
                             "context_id" = %s,
                             "document_content" = %s
-                            WHERE "document_id" = %s; ''', (
-                            doc_title,
-                            cont_id[0],
-                            document.getText(),
-                            doc_id))
+                            WHERE "document_id" = %s; ''',
+                                        (doc_title, cont_id[0], document.getText(), doc_id)
+                                        )
              
 
 # update entries in phrase table, phrase origin table and phrase meaning table
@@ -666,14 +638,12 @@ class Database(object):
 
                             
 # update entries in phrase meaning table
-                       
-                                                        
+
             finally:
                 cur.close() 
                 con.close() 
-                print ('table document updated')
-        
-    
+                print('table document updated')
+
     def delete_entry(self):
         
         from psycopg2 import connect 
@@ -687,10 +657,10 @@ class Database(object):
         
         try:        
             print('Please enter ID for deletion')
-            ID_for_del  = input()
+            ID_for_del = input()
             
             con = None 
-            con = connect("dbname=contextionary user=postgres password=%s" %(password))
+            con = connect("dbname=contextionary user=postgres password=%s" % password)
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
             cur = con.cursor()
             
@@ -705,32 +675,30 @@ class Database(object):
         finally:
             cur.close() 
             con.close() 
-            print ('The entry was deleted')
-    
-    
-    def delete_context(self,cont_for_del):
+            print('The entry was deleted')
+
+    def delete_context(self, cont_for_del):
         
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
     
         con = None 
-        con = connect("dbname=contextionary user=postgres password=%s" %(password))
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor() 
         
-        cur.execute('''SELECT "document_id" FROM document WHERE "context_id" = %s;''',(cont_for_del))
+        cur.execute('''SELECT "document_id" FROM document WHERE "context_id" = %s;''', cont_for_del)
         doc_for_del = cur.fetchall()
         
         for dfd in doc_for_del:
             self.delete_document(dfd)
         
-        cur.execute('DELETE FROM context WHERE "context_id" = %s;', (cont_for_del))
+        cur.execute('DELETE FROM context WHERE "context_id" = %s;', cont_for_del)
         
         cur.close() 
         con.close()
-        
-    
-    def delete_document(self,doc_id_for_del):
+
+    def delete_document(self, doc_id_for_del):
         
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
@@ -743,9 +711,8 @@ class Database(object):
         """
         Get the context ID for the document to delete
         """
-        cur.execute("""SELECT "context_id" FROM document WHERE "document_id" = %s;  """,doc_id_for_del)
+        cur.execute("""SELECT "context_id" FROM document WHERE "document_id" = %s;  """, doc_id_for_del)
         cont_id = cur.fetchone()
-        
         
         try:
             
@@ -754,7 +721,7 @@ class Database(object):
             All these phrases-document have to be deleted from the phrase origin table
             And the phrases-context count per context have to be updated in the phrase meaning table
             """
-            cur.execute('''SELECT "Phrase ID" FROM "phrase origin" WHERE "document_id" = %s;''', (doc_id_for_del),)
+            cur.execute('''SELECT "Phrase ID" FROM "phrase origin" WHERE "document_id" = %s;''', doc_id_for_del,)
             phrases_for_del = cur.fetchall()
             
             for phr in phrases_for_del:
@@ -767,9 +734,8 @@ class Database(object):
                                         WHERE "phrase_id" = %s AND
                                         "document_id" = %s'''
                 ,(phr, doc_id_for_del))
-                doc_count=  cur.fetchone()
-                
-                
+                doc_count = cur.fetchone()
+
                 """
                 Recall the phrase count per context. This count needs to be
                 reduced by the phrase count per document.
@@ -778,14 +744,13 @@ class Database(object):
                     "phrase_id" = %s 
                     AND "context_id" = %s'''
                 ,(phr, cont_id[0]))
-                cont_old_count=  cur.fetchone()
+                cont_old_count = cur.fetchone()
 
-                 
                 """
                 Calculate the new phrase count per context and update the count into
                 the phrase meaning table.
                 """
-                cont_new_count=cont_old_count[0]-doc_count[0]
+                cont_new_count = cont_old_count[0]-doc_count[0]
                 
                 cur.execute('''
                         UPDATE "phrase_meaning"
@@ -802,9 +767,8 @@ class Database(object):
                 """
                 Delete the phrase-document to delete entry from the phrase origin table
                 """
-                self.delete_phrase_origin(int(phr[0]),doc_id_for_del)
-                   
-                  
+                self.delete_phrase_origin(int(phr[0]), doc_id_for_del)
+
                 """
                 Delete the phrase-context entry from the phrase meaning table
                 only if the phrase count per context is equal to 0.
@@ -813,34 +777,32 @@ class Database(object):
                 phrase_meaning_for_del = cur.fetchall()
                 
                 for phrm_for_del in phrase_meaning_for_del:
-                    self.delete_phrase_meaning(phrm_for_del,cont_id)
-                
-                
+                    self.delete_phrase_meaning(phrm_for_del, cont_id)
+
                 """
                 Delete phrase from phrase table in case the phrase does not exist anymore in
                 the phrase origin table
                 """
                 cur.execute('''SELECT "phrase_id" FROM "phrase_origin" WHERE "phrase_id"=%s''',phr)
                 exist = cur.fetchone()
-                if exist==None:
-                    cur.execute('''DELETE FROM phrase WHERE "phrase_id"=%s ''',phr)
+                if not exist:
+                    cur.execute('''DELETE FROM phrase WHERE "phrase_id"=%s ''', phr)
 
-            
             """
             The document can now be deleted from the document table
             """
-            cur.execute('DELETE FROM document WHERE "document_id" = %s;', (doc_id_for_del),)
+            cur.execute('DELETE FROM document WHERE "document_id" = %s;', doc_id_for_del,)
         finally:
             cur.close()
             con.close()
 
-    def delete_phrase(self,phrase_id_for_del):    
+    def delete_phrase(self, phrase_id_for_del):
         
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
         
         con = None
-        con = connect("dbname=contextionary user=postgres password=%s" %(password))
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         
@@ -849,13 +811,13 @@ class Database(object):
         cur.close()
         con.close()
     
-    def delete_phrase_origin(self,phrase_id_for_del,doc_id_for_del):
+    def delete_phrase_origin(self, phrase_id_for_del, doc_id_for_del):
         
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
         
         con = None
-        con = connect("dbname=contextionary user=postgres password=%s" %(password))
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         
@@ -864,13 +826,13 @@ class Database(object):
         cur.close()
         con.close()
         
-    def delete_phrase_meaning(self,phrase_id_for_del,cont_id_for_del):
+    def delete_phrase_meaning(self, phrase_id_for_del, cont_id_for_del):
         
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
         
         con = None
-        con = connect("dbname=contextionary user=postgres password=%s" %(password))
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         
@@ -884,7 +846,7 @@ class Database(object):
         from psycopg2 import connect 
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
         
-        con = connect(user=self.usr, host = 'localhost', password=self.password) 
+        con = connect(user=self.usr, host='localhost', password=self.password)
         dbname = self.dbname 
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor() 
@@ -893,7 +855,7 @@ class Database(object):
         finally:
             cur.close() 
             con.close() 
-            print ('Database deleted')
+            print('Database deleted')
             
     def change_context(self):
         
@@ -919,17 +881,16 @@ class Database(object):
             old_cont_id = cur.fetchone()
             
             print('new_cont_id = ',new_cont_id[0],' old_cont_id = ', old_cont_id[0])
-            
-            
+
             if new_cont_id[0] == old_cont_id[0]:
                 print('Context name is the same. No changes required.')
             else:
                 
-                cur.execute('''SELECT "phrase_id" FROM "phrase_origin" WHERE "document_id" = %s''', (doc_n))
+                cur.execute('''SELECT "phrase_id" FROM "phrase_origin" WHERE "document_id" = %s''', doc_n)
                 phr_in_doc = cur.fetchall()
                 
                 for phr in phr_in_doc:
-#                    print('phr = ',phr)
+                    # print('phr = ',phr)
                     cur.execute('''
                             UPDATE "phrase_meaning" 
                             SET "phrase_count_per_context" = "phrase_count_per_context" 
@@ -938,12 +899,7 @@ class Database(object):
                             WHERE ("phrase_id" = %s AND "document_id" = %s))
                             WHERE "phrase_id" = %s AND "context_id" = %s
                             '''
-                            ,(
-                            phr,
-                            doc_n,
-                            phr,
-                            old_cont_id[0]
-                                    )
+                            ,(phr, doc_n, phr, old_cont_id[0])
                             )
                     cur.execute('''DELETE FROM "phrase_meaning" WHERE "phrase_count_per_context" <= 0 OR "phrase_count_per_context" IS NULL''')
                 
@@ -954,7 +910,6 @@ class Database(object):
                             doc_n
                             ))
                 
-                
                     cur.execute('''SELECT count(*) FROM "phrase_meaning" WHERE
                             "phrase_id" = %s
                             AND "context_id" = %s''',(
@@ -964,7 +919,7 @@ class Database(object):
                     exist = cur.fetchone()
                 
                     if exist[0] == 0:
-#                        print('not exists')
+                        #  print('not exists')
                         cur.execute('''INSERT INTO "phrase_meaning" 
                                 ("phrase_id", "context_id", "phrase_count_per_context")
                                 VALUES 
@@ -983,8 +938,7 @@ class Database(object):
 #                        print('New entry inserted to phrase meaning')
                 
                     else:
-                    
-#                        print('exists', exist[0])
+                        # print('exists', exist[0])
                         cur.execute('''
                             UPDATE "phrase_meaning" 
                             SET "phrase_count_per_context" = (SELECT SUM("phrase_count_per_document") 
@@ -992,15 +946,10 @@ class Database(object):
                             WHERE "phrase_id" = %s AND ("document_id" IN (SELECT "document_id" FROM "document" WHERE "context_id" = %s)))
                             WHERE "phrase_id" = %s AND "context_id" = %s
                             '''
-                            ,(
-                            phr,
-                            new_cont_id[0],
-                            phr,
-                            new_cont_id[0]
-                                    )
+                            ,(phr, new_cont_id[0], phr, new_cont_id[0])
                             )
                 
-                print ('Document context was changed')
+                print('Document context was changed')
                     
         finally:
             cur.close() 

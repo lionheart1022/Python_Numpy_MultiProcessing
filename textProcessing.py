@@ -5,20 +5,18 @@ Created on Tue Jun  5 22:05:28 2018
 @author: seniortasse
 """
 
+
 class TextProcessor(object):
-   
-    
-    def __init__(self,text,phraseMaxLength):
-        
-        
-        self.text=text
-        self.phraseMaxLength=phraseMaxLength
-        self.clauses=[]
-        self.phraseCount=dict()
-        self.wordOrderedList=[]
-        self.size=dict()
-        
-        
+
+    def __init__(self, text, phraseMaxLength):
+
+        self.text = text
+        self.phraseMaxLength = phraseMaxLength
+        self.clauses = []
+        self.phraseCount = dict()
+        self.wordOrderedList = []
+        self.size = dict()
+
         """
         As a first step once we receive a text, we will break it into clauses using
         the method breakTextIntoClauses.
@@ -29,8 +27,7 @@ class TextProcessor(object):
         As a second step, we will break the clauses into phrases of various lengths.
         """
         self.breakClausesIntoPhrases()
-   
-    
+
     def getWordOrderedList(self):
         return self.wordOrderedList
     
@@ -49,19 +46,17 @@ class TextProcessor(object):
         All commas and semi-columns that usually separate clauses will be replaced
         with dots for convenience
         """
-        modifiedText=self.text.replace(",",". .")
-        modifiedText=modifiedText.replace(";",". .") 
-        modifiedText=modifiedText.replace("(",". .") 
+        modifiedText = self.text.replace(",", ". .")
+        modifiedText = modifiedText.replace(";", ". .")
+        modifiedText = modifiedText.replace("(", ". .")
         
         """
         A very useful tool of Python is the sentence tokenizer that splits
         a text into its various sentences and save them into a list of sentences.
         """
         from nltk.tokenize import sent_tokenize
-        self.clauses=sent_tokenize(modifiedText)
+        self.clauses = sent_tokenize(modifiedText)
 
-    
-    
     def breakClausesIntoPhrases(self):
         
         """
@@ -77,12 +72,11 @@ class TextProcessor(object):
         We define a dictionary {phraselength:phrases} that will store for each
         phraselength the list of phrases that have that length.
         """
-        phraseSplit=dict()
+        phraseSplit = dict()
         
-        for length in range(1,self.phraseMaxLength+1):
-             phraseSplit.update({length:[]})
-        
-        
+        for length in range(1, self.phraseMaxLength+1):
+             phraseSplit.update({length: []})
+
         """
         We now look at each of the clauses one by one.
         """
@@ -91,13 +85,12 @@ class TextProcessor(object):
             """
             All the words of the clause are stored in a list
             """
-            wordSplit=[]
+            wordSplit = []
             
-            wordSplit=word_tokenize(clause)
+            wordSplit = word_tokenize(clause)
 
             wordSplit = [w for w in wordSplit if re.match("^[A-Za-z0-9_-]*$", w) and not w.startswith('-') and not w.endswith('-') and not w.startswith('_') and not w.endswith('_')]
-            
-            
+
             self.wordOrderedList.extend(wordSplit)
         
             
@@ -110,12 +103,11 @@ class TextProcessor(object):
             """
 
             for wordindex in range(len(wordSplit)):
-                word=wordSplit[wordindex]
-                if word[0].isupper() and sum(1 for c in word if c.isupper())==1:        
-                    word=word.lower()
-                    wordSplit[wordindex]=word
+                word = wordSplit[wordindex]
+                if word[0].isupper() and sum(1 for c in word if c.isupper()) == 1:
+                    word = word.lower()
+                    wordSplit[wordindex] = word
 
-            
             from collections import Counter
             
             """
@@ -123,21 +115,19 @@ class TextProcessor(object):
             that have that length
             """
             for length in range(1,self.phraseMaxLength+1):
-                
-                
                 for i in range(len(wordSplit)):
-                    if i<len(wordSplit)-(length-1):
-                        s=wordSplit[i]                        
+                    if i < len(wordSplit)-(length-1):
+                        s = wordSplit[i]
                         
-                        if length>1:
-                            for l in range(1,length):
+                        if length > 1:
+                            for l in range(1, length):
                                 s += " " + wordSplit[i+l]
                         
                         # If special symbol in the beginning
-                        if (not s[0].isalnum()):
+                        if not s[0].isalnum():
                             i = 0
                             while not s[0].isalnum():
-                                i+=1
+                                i += 1
                                 if i == len(s):
                                     break
                             s1 = s[i:]
@@ -145,16 +135,15 @@ class TextProcessor(object):
                             s1 = s
                         
                         # If special symbol in the end
-                        if (not s[-1].isalnum()):
+                        if not s[-1].isalnum():
                             i = 0
                             while not s[-i].isalnum():
-                                i+=1
+                                i += 1
                                 if i == len(s):
                                     break
                             s2 = s1[:-i]
                         else:
                             s2 = s1
-                        
 
                         phraseSlice = s2
                         """
@@ -169,16 +158,12 @@ class TextProcessor(object):
         We also update the --phraseLengthCounter-- dictionary that tells us for each
         phrase length how many phrases in total exist.
         """
-        for length in range(1,self.phraseMaxLength+1):
-            self.size.update({length:len(phraseSplit[length])})
-            counter=Counter()        
+        for length in range(1, self.phraseMaxLength+1):
+            self.size.update({length: len(phraseSplit[length])})
+            counter = Counter()
             counter.update(phraseSplit[length]) 
-            self.phraseCount.update({length:dict(counter)})
-        
-        
-       
-    
+            self.phraseCount.update({length: dict(counter)})
+
     def __str__(self):    
         
         return "I am the Document class"
-    
