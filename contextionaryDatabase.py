@@ -71,7 +71,6 @@ class Document(object):
         """
         
         self.textProcessor = TextProcessor(self.text, self.phraseMaxLength)
-        #self.updatePhrase()
 
     def getText(self):
         
@@ -86,21 +85,18 @@ class Document(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
         con = None 
-        con = connect("dbname=%s user=%s password=%s" %(dbname,usr,password))
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
         cur = con.cursor()
         try:
-            for length in range(1,self.phraseMaxLength+1):
+            for length in range(1, self.phraseMaxLength+1):
                 for phrase in self.textProcessor.getPhraseCount()[length].keys():
                     self.phraseTable.append([phrase,length,self.textProcessor.getPhraseCount()[length][phrase]])
                                                       
 # Update phrase table (if there is no such phrase in the table and new document is created)
  
-                    cur.execute('''SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s;''', (phrase,) )
+                    cur.execute('''SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s;''', (phrase,))
                     phrase_id = cur.fetchone()
-                    
-                    #if phrase == None or phrase == '' or phrase == ' ':
-                    #    phrase_id = 1
 
                     if not phrase_id:
                         cur.execute('''
@@ -127,7 +123,6 @@ class Document(object):
             cur.close() 
             con.close() 
             print('table phrase updated')
-            #self.updatePhraseMeaning()
 
     def updatePhraseOrigin(self,phrase_id,phrase,length):
         
@@ -263,7 +258,7 @@ class Document(object):
 
 class Database(object):
     
-    def __init__(self, libraryName, phraseMaximumLength, projectPath):
+    def __init__(self, libraryName, phraseMaximumLength, projectPath, createDatabase=0):
 
         print("Initializing language universe class.....")
         
@@ -289,36 +284,14 @@ class Database(object):
         self.projectPath = projectPath
         self.libraryFolderPath = self.createLibraryContextPath()
         self.documents = []
-        
-        s = '''Please enter the action required:
-            1 - Create database
-            2 - Create tables
-            3 - Add entry
-            4 - Delete entry
-            5 - Drop database
-            6 - Change document context
-            7 - Quit'''
 
-        print(s)
-        action = input()
-        
-        if action == '1':
-            self.create()
-        
-        if action == '2':
-            self.create_tables()
-            
-        if action == '3':
-            self.add_entry()
-            
-        if action == '4':
-            self.delete_entry()
-        
-        if action == '5':
+        if createDatabase == 1:
             self.drop()
-            
-        if action == '6':
-            self.change_context()
+            self.create()
+            self.create_tables()
+            self.add_contexts()
+
+        self.add_documents()
 
     def create(self):
 
@@ -516,80 +489,62 @@ class Database(object):
             cur.close() 
             con.close() 
             print('tables created')
-      
-    def add_entry(self):
-        
-        from psycopg2 import connect 
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
-        
-        s1 = '''Please enter the table for entry addition:
-        1 - Context
-        2 - Document
-        3 - Phrase'''
-        print(s1)
-        table = input()
-        con = None 
+
+    def add_contexts(self):
+        from psycopg2 import connect
+        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+        import csv
+
         con = connect("dbname=contextionary user=postgres password=%s" % password)
-        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
-        cur = con.cursor() 
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()
         try:
-            if table == '1':
-                import pandas as pd
-                import csv
 
-                data_list = []
-                level1 = ['Human activity']
-                level2 = ['Belief', 'Knowledge']
-                level3 = ['Astrology', 'Religion', 'Algebra', 'Oncology']
+            data_list = []
+            level1 = ['Human activity']
+            level2 = ['Belief', 'Knowledge']
+            level3 = ['Astrology', 'Religion', 'Algebra', 'Oncology']
 
-                file = 'Context list.csv'
-                with open(file) as csvfile:
-                    reader = csv.reader(csvfile)
-                    next(reader)
-                    for row in reader:
-                        data_list.append(row)
+            file = 'Context list.csv'
+            with open(file) as csvfile:
+                reader = csv.reader(csvfile)
+                next(reader)
+                for row in reader:
+                    data_list.append(row)
 
-                for data in data_list:
-                    context_id = int(data[0])
-                    context_immediate_parent_id = int(data[2])
-                    context_name = data[1]
-                    context_children_id = None
-                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                    context_level = None
+            for data in data_list:
+                context_id = int(data[0])
+                context_immediate_parent_id = int(data[2])
+                context_name = data[1]
+                context_children_id = None
+                context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+                context_level = None
 
-                    if context_name in level1:
-                        context_level = 1
-                        context_children_id = '2,3'
-                    if context_name in level2:
-                        context_level = 2
-                        index = level2.index(context_name)
-                        if index == 0:
-                            context_children_id = '6,7'
-                        if index == 1:
-                            context_children_id = '4,5'
-                    if context_name in level3:
-                        context_level = 3
-                        context_children_id = '0'
-    
-                    cur.execute('''insert into context 
-                    ("context_id", "context_immediate_parent_id", "context_name", "context_children_id", 
-                    "context_picture","context_level") 
-                    VALUES (%s, %s, %s, %s, %s, %s)''', (
+                if context_name in level1:
+                    context_level = 1
+                    context_children_id = '2,3'
+                if context_name in level2:
+                    context_level = 2
+                    index = level2.index(context_name)
+                    if index == 0:
+                        context_children_id = '6,7'
+                    if index == 1:
+                        context_children_id = '4,5'
+                if context_name in level3:
+                    context_level = 3
+                    context_children_id = '0'
+
+                cur.execute('''insert into context 
+                                ("context_id", "context_immediate_parent_id", "context_name", "context_children_id", 
+                                "context_picture","context_level") 
+                                VALUES (%s, %s, %s, %s, %s, %s)''', (
                     context_id,
                     context_immediate_parent_id,
                     context_name, context_children_id, context_picture, context_level))
-                    
-            if table == '2':
-                self.add_documents()     
-            
-            if table == '3':
-                cur.execute('insert into phrase ('
-                            '"phrase_id", "document_id", "phrase_text", "phrase_length", '
-                            '"phrase_count_per_document") VALUES ((SELECT count(*) FROM phrase) + 1, 1, 214234, 50, 23)')
         finally:
-            cur.close() 
-            con.close() 
-            print ('table updated')
+            cur.close()
+            con.close()
 
     def add_documents(self):
         

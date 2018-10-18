@@ -22,7 +22,8 @@ from contextionaryDatabase import Database
 libraryName = "Human activity"
 projectPath = "/home/dev/WorkSpace/contextionary 0.0"
 phraseLength = 2
-db = Database(libraryName, phraseLength, projectPath)
+createDatabase = 1
+db = Database(libraryName, phraseLength, projectPath, createDatabase)
 
 
 """
