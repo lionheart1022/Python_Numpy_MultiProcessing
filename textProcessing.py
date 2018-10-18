@@ -114,7 +114,7 @@ class TextProcessor(object):
             We list for each phrase length all the phrases of the clause
             that have that length
             """
-            for length in range(1,self.phraseMaxLength+1):
+            for length in range(1, self.phraseMaxLength+1):
                 for i in range(len(wordSplit)):
                     if i < len(wordSplit)-(length-1):
                         s = wordSplit[i]
