@@ -359,7 +359,8 @@ class Database(object):
                         "context_immediate_parent_id" bigint, 
                         "context_name" varchar(255), 
                         "context_children_id" text, 
-                        "context_picture" varchar(255))''')
+                        "context_picture" varchar(255),
+                        "context_level" integer)''')
             
             cur.execute('''CREATE TABLE document (
                         "document_id" serial PRIMARY KEY, 
@@ -534,19 +535,49 @@ class Database(object):
         try:
             if table == '1':
                 import pandas as pd
-                file = 'Context list.xlsx'
-                xl = pd.ExcelFile(file)
-                print(xl.sheet_names)
-                df1 = xl.parse('Context hierarchy table')
-                for i in range(0, len(df1)):
+                import csv
+
+                data_list = []
+                level1 = ['Human activity']
+                level2 = ['Belief', 'Knowledge']
+                level3 = ['Astrology', 'Religion', 'Algebra', 'Oncology']
+
+                file = 'Context list.csv'
+                with open(file) as csvfile:
+                    reader = csv.reader(csvfile)
+                    next(reader)
+                    for row in reader:
+                        data_list.append(row)
+
+                for data in data_list:
+                    context_id = int(data[0])
+                    context_immediate_parent_id = int(data[2])
+                    context_name = data[1]
+                    context_children_id = None
+                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+                    context_level = None
+
+                    if context_name in level1:
+                        context_level = 1
+                        context_children_id = '2,3'
+                    if context_name in level2:
+                        context_level = 2
+                        index = level2.index(context_name)
+                        if index == 0:
+                            context_children_id = '6,7'
+                        if index == 1:
+                            context_children_id = '4,5'
+                    if context_name in level3:
+                        context_level = 3
+                        context_children_id = '0'
     
                     cur.execute('''insert into context 
-                    ("context_id", "context_immediate_parent_id", "context_name", "context_children_id") 
-                    VALUES (%s, %s, %s, %s)''', (
-                    int(df1["context_id"][i]),
-                    int(df1["context_immediate_parent_id"][i]),
-                    df1["context_name"][i],
-                    str(df1["context_children_id"][i])))
+                    ("context_id", "context_immediate_parent_id", "context_name", "context_children_id", 
+                    "context_picture","context_level") 
+                    VALUES (%s, %s, %s, %s, %s, %s)''', (
+                    context_id,
+                    context_immediate_parent_id,
+                    context_name, context_children_id, context_picture, context_level))
                     
             if table == '2':
                 self.add_documents()     
