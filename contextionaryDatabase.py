@@ -584,7 +584,6 @@ class Database(object):
                         # dircount=1 if document_path exists in the database and 0 if path doesn't exist in the database
                         docpathcount = cur.fetchone()
 
-                        # if name.endswith(".txt") and name.startswith("0_"):
                         if name.endswith(".txt") and (docpathcount[0] == 0):
                             # cur.execute('''(SELECT Count(*) FROM document)''')
                             # doc_id = cur.fetchone()
