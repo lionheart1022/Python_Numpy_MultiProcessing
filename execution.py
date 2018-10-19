@@ -18,9 +18,10 @@ database for the program, called "contextionary". The "contextionary" database c
 """
 
 from contextionaryDatabase import Database
+import os
 
 libraryName = "Human activity"
-projectPath = "/home/dev/WorkSpace/contextionary 0.0"
+projectPath = os.getcwd()
 phraseLength = 2
 createDatabase = 1
 db = Database(libraryName, phraseLength, projectPath, createDatabase)
