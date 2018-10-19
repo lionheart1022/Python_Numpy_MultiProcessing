@@ -627,11 +627,11 @@ class Database(object):
 
 # update entries in phrase table, phrase origin table and phrase meaning table
                             document.updatePhraseTables()
+                            print('table document updated')
 
             finally:
                 cur.close() 
-                con.close() 
-                print('table document updated')
+                con.close()
 
     def delete_entry(self):
         
