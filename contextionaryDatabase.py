@@ -339,7 +339,8 @@ class Database(object):
                         "document_id" serial PRIMARY KEY, 
                         "document_title" varchar(255), 
                         "context_id" bigint references context("context_id"), 
-                        "document_content" text)''')
+                        "document_content" text,
+                        "document_path" text)''')
             
             ######### revised 06/04/2018
             cur.execute('''CREATE TABLE phrase (
@@ -577,20 +578,26 @@ class Database(object):
                 # if context exists in database and has no child, then we look into its .txt files
                 if (dircount[0] > 0) and (childlist[0] == '0'):
                     for name in files:
-             
-                        if name.endswith(".txt") and name.startswith("0_"):
+                        doc_path = root.split('Context tree')[1][1:] + '/' + name
+                        cur.execute(""" SELECT count(*) FROM document WHERE "document_path" = %s; """,
+                                    ([doc_path]), )
+                        # dircount=1 if document_path exists in the database and 0 if path doesn't exist in the database
+                        docpathcount = cur.fetchone()
 
+                        # if name.endswith(".txt") and name.startswith("0_"):
+                        if name.endswith(".txt") and (docpathcount[0] == 0):
                             # cur.execute('''(SELECT Count(*) FROM document)''')
                             # doc_id = cur.fetchone()
                             
                             dummytitle = "_"
                             cur.execute('''
                             insert into document 
-                            ("document_title", "context_id", "document_content") 
+                            ("document_title", "context_id", "document_content", "document_path") 
                             VALUES (
                             %s, 
                             %s,
-                            %s)''', (dummytitle, 1, 1))
+                            %s,
+                            %s)''', (dummytitle, 1, 1, doc_path))
 
                             cur.execute("""SELECT "document_id" FROM document WHERE "document_title"=%s;""" , ([dummytitle]),)
                             doc_id = cur.fetchone()
@@ -598,14 +605,12 @@ class Database(object):
                             filelocation = os.path.join(root, name)
                             document = Document(doc_id, filelocation, self.phraseMaximumLength, rootdirname)
                             self.documents.append(document)
-                            
-                            os.rename(filelocation, root + '/' + '1' + name[1:])
-                            
+
                             cont_id = []
                             b = document.getContext()
                             cur.execute("""SELECT "context_id" FROM context WHERE "context_name" = %s;  """, ([b]),)
                             cont_id = cur.fetchone()
-                            
+
                             doc_title = name[2:len(name)-4]
   
 # update enrties in document table                          
@@ -613,17 +618,15 @@ class Database(object):
                             UPDATE document SET
                             "document_title" = %s, 
                             "context_id" = %s,
-                            "document_content" = %s
+                            "document_content" = %s,
+                            "document_path" = %s
                             WHERE "document_id" = %s; ''',
-                                        (doc_title, cont_id[0], document.getText(), doc_id)
+                                        (doc_title, cont_id[0], document.getText(), doc_path, doc_id)
                                         )
              
 
 # update entries in phrase table, phrase origin table and phrase meaning table
                             document.updatePhraseTables()
-
-                            
-# update entries in phrase meaning table
 
             finally:
                 cur.close() 
