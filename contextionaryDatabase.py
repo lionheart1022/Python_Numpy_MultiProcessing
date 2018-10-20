@@ -513,51 +513,11 @@ class Database(object):
             context_children_id_list1 = []
             context_children_id_list2_all = []
 
-            for data in data_list:
-                context_id = int(data[0])
-                context_immediate_parent_id = int(data[2])
-                context_name = data[1]
-                context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+            self.get_parent_id(data_list, context_children_id_list1, completed_list)
 
-                if context_immediate_parent_id == -1:
-                    context_level = 1
-                    for sub_data in data_list:
-                        if context_id == int(sub_data[2]):
-                            context_children_id_list1.append(sub_data[0])
-                    context_children_id = ','.join(context_children_id_list1)
-                    completed_list.append([context_id, context_immediate_parent_id, context_name,
-                                           context_children_id, context_picture, context_level])
+            self.get_sub_child_id(data_list, context_children_id_list1, context_children_id_list2_all, completed_list)
 
-            for data in data_list:
-                for context_child_id in context_children_id_list1:
-                    context_id = int(data[0])
-                    context_immediate_parent_id = int(data[2])
-                    context_name = data[1]
-                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                    context_level = 2
-
-                    context_children_id_list2 = []
-
-                    if context_id == int(context_child_id):
-                        for sub_data in data_list:
-                            if context_id == int(sub_data[2]):
-                                context_children_id_list2.append(sub_data[0])
-                        context_children_id = ','.join(context_children_id_list2)
-                        completed_list.append([context_id, context_immediate_parent_id, context_name,
-                                               context_children_id, context_picture, context_level])
-                    context_children_id_list2_all.extend(context_children_id_list2)
-
-            for data in data_list:
-                for context_child_id in context_children_id_list2_all:
-                    context_id = int(data[0])
-                    context_immediate_parent_id = int(data[2])
-                    context_name = data[1]
-                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                    context_level = 3
-                    context_children_id = '0'
-                    if context_id == int(context_child_id):
-                        completed_list.append([context_id, context_immediate_parent_id, context_name,
-                                               context_children_id, context_picture, context_level])
+            self.get_last_child_id(data_list, context_children_id_list2_all, completed_list)
 
             for c_list in completed_list:
                 context_id = c_list[0]
@@ -576,6 +536,55 @@ class Database(object):
         finally:
             cur.close()
             con.close()
+
+    def get_parent_id(self, data_list, context_children_id_list, completed_list):
+        for data in data_list:
+            context_id = int(data[0])
+            context_immediate_parent_id = int(data[2])
+            context_name = data[1]
+            context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+
+            if context_immediate_parent_id == -1:
+                context_level = 1
+                for sub_data in data_list:
+                    if context_id == int(sub_data[2]):
+                        context_children_id_list.append(sub_data[0])
+                context_children_id = ','.join(context_children_id_list)
+                completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                       context_children_id, context_picture, context_level])
+
+    def get_sub_child_id(self, data_list, context_children_id_list, context_child_id_total, completed_list):
+        for data in data_list:
+            for context_child_id in context_children_id_list:
+                context_id = int(data[0])
+                context_immediate_parent_id = int(data[2])
+                context_name = data[1]
+                context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+                context_level = 2
+
+                context_children_id_list2 = []
+
+                if context_id == int(context_child_id):
+                    for sub_data in data_list:
+                        if context_id == int(sub_data[2]):
+                            context_children_id_list2.append(sub_data[0])
+                    context_children_id = ','.join(context_children_id_list2)
+                    completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                           context_children_id, context_picture, context_level])
+                context_child_id_total.extend(context_children_id_list2)
+
+    def get_last_child_id(self, data_list, context_children_id_list, completed_list):
+        for data in data_list:
+            for context_child_id in context_children_id_list:
+                context_id = int(data[0])
+                context_immediate_parent_id = int(data[2])
+                context_name = data[1]
+                context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
+                context_level = 3
+                context_children_id = '0'
+                if context_id == int(context_child_id):
+                    completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                           context_children_id, context_picture, context_level])
 
     def add_documents(self):
 
