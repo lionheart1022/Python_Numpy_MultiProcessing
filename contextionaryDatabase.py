@@ -100,17 +100,11 @@ class Document(object):
                     phrase_id = cur.fetchone()
 
                     if not phrase_id:
-                        cur.execute('''
-                                    insert into phrase 
-                                    ("phrase_text", "phrase_length") 
-                                    VALUES (
-                                            %s, 
-                                            %s
-                                            )
-                                    ''', (
-                            phrase,
-                            length
-                        ))
+                        cur.execute(
+                            '''
+                              INSERT INTO phrase ("phrase_text", "phrase_length") 
+                              VALUES (%s, %s)
+                            ''', (phrase, length))
 
                         cur.execute('''SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s;''', (phrase,))
                         phrase_id = cur.fetchone()
@@ -551,7 +545,6 @@ class Database(object):
                                            context_children_id, context_picture, context_level])
 
     def add_document(self, file_path):
-        print(file_path)
         name = Path(file_path).parts[-1]
         temp_name = '/' + name
         root = file_path.split(temp_name)[0]
@@ -566,7 +559,7 @@ class Database(object):
 
         try:
             if name.endswith(".txt") and (docpathcount[0] == 0):
-                dummytitle = "_"
+                dummytitle = name
                 cur.execute(
                     '''
                     INSERT INTO document 

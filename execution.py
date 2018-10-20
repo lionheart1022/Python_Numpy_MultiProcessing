@@ -22,10 +22,7 @@ import os
 from psycopg2 import connect
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
-from threading import Thread
-from queue import Queue, Empty
 from multiprocessing import Process
-import multiprocessing
 
 
 libraryName = "Human activity"
@@ -43,21 +40,6 @@ libraryFolderPath = db.libraryFolderPath
 
 def add_document_process(filepath):
     db.add_document(filepath)
-
-
-class AddDocumentThread(Thread):
-    def __init__(self, queue):
-        Thread.__init__(self)
-        self.queue = queue
-
-    def run(self):
-        while True:
-            try:
-                filepath = self.queue.get_nowait()
-                add_document_process(filepath)
-            except Empty:
-                break
-        return
 
 
 file_list = []
@@ -89,24 +71,10 @@ if __name__ == '__main__':
 
     if file_list:
         print("Updating documents.....")
-        # q = Queue()
-        # for files in file_list:
-        #     for file in files[0]:
-        #         q.put(files[1] + '/' + file)
-        #
-        # new_threads = []
-        # for i in range(multiprocessing.cpu_count()):
-        #     t = AddDocumentThread(q, connect)
-        #     t.start()
-        #     new_threads.append(t)
-        #
-        # for thread in new_threads:
-        #     thread.join()
 
         processes = []
         for files in file_list:
             for file in files[0]:
-                # q.put(files[1] + '/' + file)
                 p = Process(target=add_document_process, args=(files[1] + '/' + file,))
                 processes.append(p)
         for p in processes:
