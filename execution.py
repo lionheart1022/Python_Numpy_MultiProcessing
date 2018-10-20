@@ -26,6 +26,7 @@ import multiprocessing
 from multiprocessing import Process
 from threading import Thread
 from queue import Queue, Empty
+import platform
 
 
 libraryName = "Human activity"
@@ -93,12 +94,14 @@ if __name__ == '__main__':
         q = Queue()
         for files in file_list:
             for file in files[0]:
-                q.put(files[1] + '/' + file)
+                if 'Linux' in platform.platform():
+                    q.put(files[1] + '/' + file)
+                else:
+                    q.put(files[1] + '\\' + file)
 
         new_threads = []
-        for i in range(multiprocessing.cpu_count()):
-            t = AddDocumentThread(q)
-            t.start()
-            new_threads.append(t)
+        t = AddDocumentThread(q)
+        t.start()
+        new_threads.append(t)
         for thread in new_threads:
             thread.join()

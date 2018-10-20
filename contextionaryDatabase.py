@@ -27,6 +27,7 @@ import csv
 from psycopg2 import connect
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
+import platform
 
 
 class Document(object):
@@ -546,13 +547,22 @@ class Database(object):
 
     def add_document(self, file_path):
         name = Path(file_path).parts[-1]
-        temp_name = '/' + name
+        if 'Linux' in platform.platform():
+            temp_name = '/' + name
+        else:
+            temp_name = '\\' + name
+
         root = file_path.split(temp_name)[0]
         rootdirname = Path(root).parts[-1]
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
-        doc_path = root.split('Context tree/')[1] + '/' + name
+
+        if 'Linux' in platform.platform():
+            doc_path = root.split('Context tree')[1][1:] + '/' + name
+        else:
+            doc_path = root.split('Context tree')[1][1:] + '\\' + name
+
         cur.execute(""" SELECT count(*) FROM document WHERE "document_path" = %s; """,
                     ([doc_path]), )
         docpathcount = cur.fetchone()
