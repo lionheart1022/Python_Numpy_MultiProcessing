@@ -23,7 +23,10 @@ Each phrase of a document is counted and the count is updated in the phrase orig
 The phrase count per context is updated in the phrase meaning table.
 """
 import os
-
+import csv
+from psycopg2 import connect
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pathlib import Path
 
 
 class Document(object):
@@ -83,9 +86,6 @@ class Document(object):
 
     def updatePhraseTables(self):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-        con = None
         con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -127,9 +127,6 @@ class Document(object):
 
     def updatePhraseOrigin(self, phrase_id, phrase, length):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -159,9 +156,6 @@ class Document(object):
         print('table phrase origin updated')
 
     def updatePhraseMeaning(self, phr_id):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -288,9 +282,6 @@ class Database(object):
 
     def create(self):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         con = connect(user=self.usr, host='localhost', password=self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -302,16 +293,13 @@ class Database(object):
             print('Database %s created.' % self.dbname)
 
     def createLibraryContextPath(self):
-        from pathlib import Path
+
         for root, dirs, files in os.walk(self.projectPath):
             if Path(root).parts[-1] == self.libraryName:
                 return root
         return None
 
     def create_tables(self):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect("dbname=" + self.dbname + " user=" + self.usr + " password=" + self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -334,13 +322,11 @@ class Database(object):
                         "document_content" text,
                         "document_path" text)''')
 
-            ######### revised 06/04/2018
             cur.execute('''CREATE TABLE phrase (
                         "phrase_id" serial PRIMARY KEY, 
                         "phrase_text" varchar(255), 
                         "phrase_length" smallint, 
                         "red_flag" smallint)''')
-            #########
 
             cur.execute('''CREATE TABLE "phrase_origin" (
                         "phrase_id" bigint references phrase("phrase_id"),
@@ -475,10 +461,6 @@ class Database(object):
             print('tables created')
 
     def add_contexts(self):
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
-        import csv
 
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -575,15 +557,10 @@ class Database(object):
 
         print("Updating documents.....")
 
-        from pathlib import Path
-
         print(self.libraryFolderPath)
 
         for root, dirs, files in os.walk(self.libraryFolderPath):
             rootdirname = Path(root).parts[-1]
-
-            from psycopg2 import connect
-            from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
             con = connect("dbname=contextionary user=postgres password=%s" % password)
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -648,23 +625,19 @@ class Database(object):
 
     def delete_entry(self):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         s1 = '''Please enter the table for entry deletion:
         1 - Context
         2 - Document'''
         print(s1)
         table = input()
 
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()
+
         try:
             print('Please enter ID for deletion')
             ID_for_del = input()
-
-            con = None
-            con = connect("dbname=contextionary user=postgres password=%s" % password)
-            con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-            cur = con.cursor()
 
             if table == '1':
                 self.delete_context(ID_for_del)
@@ -678,9 +651,6 @@ class Database(object):
             print('The entry was deleted')
 
     def delete_context(self, cont_for_del):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -698,9 +668,6 @@ class Database(object):
         con.close()
 
     def delete_document(self, doc_id_for_del):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect("dbname=contextionary user=postgres password='password'")
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -727,21 +694,24 @@ class Database(object):
                 """
                 Record the phrase count per document to delete
                 """
-                cur.execute('''SELECT "phrase_count_per_document"
-                                        FROM "phrase_origin"
-                                        WHERE "phrase_id" = %s AND
-                                        "document_id" = %s'''
-                            , (phr, doc_id_for_del))
+                cur.execute(
+                    '''SELECT "phrase_count_per_document"
+                       FROM "phrase_origin"
+                       WHERE "phrase_id" = %s 
+                       AND "document_id" = %s
+                    ''', (phr, doc_id_for_del))
                 doc_count = cur.fetchone()
 
                 """
                 Recall the phrase count per context. This count needs to be
                 reduced by the phrase count per document.
                 """
-                cur.execute('''SELECT "phrase_count_per_context" FROM "phrase_meaning" WHERE 
-                    "phrase_id" = %s 
-                    AND "context_id" = %s'''
-                            , (phr, cont_id[0]))
+                cur.execute(
+                    '''SELECT "phrase_count_per_context" 
+                       FROM "phrase_meaning" 
+                       WHERE "phrase_id" = %s 
+                       AND "context_id" = %s
+                    ''', (phr, cont_id[0]))
                 cont_old_count = cur.fetchone()
 
                 """
@@ -753,14 +723,9 @@ class Database(object):
                 cur.execute('''
                         UPDATE "phrase_meaning"
                         SET "phrase_count_per_context" = %s
-                        WHERE 
-                        "phrase_id" = %s 
+                        WHERE "phrase_id" = %s 
                         AND "context_id" = %s
-                        ''', (
-                    cont_new_count,
-                    phr,
-                    cont_id)
-                            )
+                        ''', (cont_new_count, phr, cont_id))
 
                 """
                 Delete the phrase-document to delete entry from the phrase origin table
@@ -772,8 +737,11 @@ class Database(object):
                 only if the phrase count per context is equal to 0.
                 """
                 cur.execute(
-                    '''SELECT "phrase_id" FROM "phrase_meaning" WHERE "context_id"=%s AND "phrase_count_per_context"=0''',
-                    (cont_id))
+                    '''SELECT "phrase_id" 
+                       FROM "phrase_meaning" 
+                       WHERE "context_id"=%s 
+                       AND "phrase_count_per_context"=0
+                    ''', cont_id)
                 phrase_meaning_for_del = cur.fetchall()
 
                 for phrm_for_del in phrase_meaning_for_del:
@@ -798,9 +766,6 @@ class Database(object):
 
     def delete_phrase(self, phrase_id_for_del):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -811,9 +776,6 @@ class Database(object):
         con.close()
 
     def delete_phrase_origin(self, phrase_id_for_del, doc_id_for_del):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
@@ -827,9 +789,6 @@ class Database(object):
 
     def delete_phrase_meaning(self, phrase_id_for_del, cont_id_for_del):
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -841,9 +800,6 @@ class Database(object):
         con.close()
 
     def drop(self):
-
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
         con = connect(user=self.usr, host='localhost', password=self.password)
         dbname = self.dbname
@@ -868,9 +824,6 @@ class Database(object):
         print('Please provide the new context name')
         new_cont_name = input()
 
-        from psycopg2 import connect
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
         con = connect("dbname=" + self.dbname + " user=" + self.usr + " password=" + self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -892,7 +845,6 @@ class Database(object):
                 phr_in_doc = cur.fetchall()
 
                 for phr in phr_in_doc:
-                    # print('phr = ',phr)
                     cur.execute('''
                             UPDATE "phrase_meaning" 
                             SET "phrase_count_per_context" = "phrase_count_per_context" 
