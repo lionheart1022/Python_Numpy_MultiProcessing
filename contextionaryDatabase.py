@@ -22,6 +22,8 @@ according to their context. Each document is assigned to a context.
 Each phrase of a document is counted and the count is updated in the phrase origin table.
 The phrase count per context is updated in the phrase meaning table.
 """
+import os
+
 
 
 class Document(object):
@@ -127,13 +129,11 @@ class Document(object):
 
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-        con = None
+
         con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
-        # cur.execute('''(SELECT Count(*) FROM document)''')
-        # doc_id = cur.fetchone()
         cur.execute('''SELECT "phrase_id" FROM "phrase_origin"
                     WHERE "phrase_id" = %s AND "document_id" = %s''',
                     (phrase_id,
@@ -162,7 +162,7 @@ class Document(object):
 
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-        con = None
+
         con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -181,16 +181,11 @@ class Document(object):
         # not exists
         if not exist:
             cur.execute('''
-                        insert into "phrase_meaning" 
+                        INSERT INTO "phrase_meaning" 
                         ("phrase_id" , 
                          "context_id" , 
                          "phrase_count_per_context") 
-                        VALUES (
-                                %s,
-                                %s, 
-                                0)
-                                '''
-                        , (phr_id, cont_id[0]))
+                        VALUES (%s, %s, 0)''', (phr_id, cont_id[0]))
 
             if phr_id == 1:
                 print("first phrase is not yet into phrase meaning table. Just added now at context ID")
@@ -307,7 +302,6 @@ class Database(object):
             print('Database %s created.' % self.dbname)
 
     def createLibraryContextPath(self):
-        import os
         from pathlib import Path
         for root, dirs, files in os.walk(self.projectPath):
             if Path(root).parts[-1] == self.libraryName:
@@ -404,7 +398,6 @@ class Database(object):
                         PRIMARY KEY ("phrase_id", "context_id")
                         )''')
 
-            ### Added 29th May 2018: 2 tables: context semantic field and phrase semantic field
             cur.execute('''CREATE TABLE "context_phrase" (                         
                         "context_id" bigint references context("context_id"), 
                         "phrase_id" bigint references phrase("phrase_id"), 
@@ -420,7 +413,6 @@ class Database(object):
                         PRIMARY KEY ("context_id", "context_phrase_id","related_phrase_id")
                         )''')
 
-            ######### revised 06/03/2018
             cur.execute('''CREATE TABLE "shared_word" (
                         "long_phrase_id" bigint references phrase("phrase_id"), 
                         "sibling_id" bigint references phrase("phrase_id"), 
@@ -453,10 +445,6 @@ class Database(object):
                         PRIMARY KEY ("phrase_id", "context_id")
                         )''')
 
-            #########
-
-            ######### revised 06/18/2018
-            ### TASK 1
             cur.execute('''CREATE TABLE "input_text_context_identifier" (
                         "input_text_id" bigint,
                         "context_id" bigint, 
@@ -464,7 +452,6 @@ class Database(object):
                         PRIMARY KEY ("input_text_id", "context_id")
                         )''')
 
-            ### TASK 2
             cur.execute('''CREATE TABLE "input_text_word_position" (
                         "input_text_id" bigint,
                         "word_position" bigint, 
@@ -472,7 +459,6 @@ class Database(object):
                         PRIMARY KEY ("input_text_id", "word_position")
                         )''')
 
-            ### TASK 3
             cur.execute('''CREATE TABLE "input_text_keywords" (
                         "input_text_id" bigint, 
                         "context_id" bigint, 
@@ -482,7 +468,6 @@ class Database(object):
                         "phrase_id" bigint, 
                         PRIMARY KEY ("input_text_id", "context_id", "keyword_id")
                         )''')
-            #########
 
         finally:
             cur.close()
@@ -590,7 +575,6 @@ class Database(object):
 
         print("Updating documents.....")
 
-        import os
         from pathlib import Path
 
         print(self.libraryFolderPath)
@@ -600,42 +584,33 @@ class Database(object):
 
             from psycopg2 import connect
             from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-            con = None
+
             con = connect("dbname=contextionary user=postgres password=%s" % password)
             con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cur = con.cursor()
 
-            cur.execute(""" SELECT count(*) FROM context WHERE "context_name" = %s; """, ([rootdirname]), )
-            # dircount=1 if context exists in the database and 0 if context doesn't exist in the database
+            cur.execute(""" SELECT count(*) FROM context WHERE "context_name" = %s; """,
+                        ([rootdirname]), )
             dircount = cur.fetchone()
 
-            cur.execute(""" SELECT "context_children_id" FROM context WHERE "context_name" = %s; """, ([rootdirname]), )
-            # we want to search only independent contexts = contexts with 0 child
+            cur.execute(""" SELECT "context_children_id" FROM context WHERE "context_name" = %s; """,
+                        ([rootdirname]), )
             childlist = cur.fetchone()
 
             try:
-                # if context exists in database and has no child, then we look into its .txt files
                 if (dircount[0] > 0) and (childlist[0] == '0'):
                     for name in files:
                         doc_path = root.split('Context tree')[1][1:] + '/' + name
                         cur.execute(""" SELECT count(*) FROM document WHERE "document_path" = %s; """,
                                     ([doc_path]), )
-                        # dircount=1 if document_path exists in the database and 0 if path doesn't exist in the database
                         docpathcount = cur.fetchone()
 
                         if name.endswith(".txt") and (docpathcount[0] == 0):
-                            # cur.execute('''(SELECT Count(*) FROM document)''')
-                            # doc_id = cur.fetchone()
-
                             dummytitle = "_"
                             cur.execute('''
-                            insert into document 
+                            INSERT INTO document 
                             ("document_title", "context_id", "document_content", "document_path") 
-                            VALUES (
-                            %s, 
-                            %s,
-                            %s,
-                            %s)''', (dummytitle, 1, 1, doc_path))
+                            VALUES (%s, %s, %s, %s)''', (dummytitle, 1, 1, doc_path))
 
                             cur.execute("""SELECT "document_id" FROM document WHERE "document_title"=%s;""",
                                         ([dummytitle]), )
@@ -645,12 +620,11 @@ class Database(object):
                             document = Document(doc_id, filelocation, self.phraseMaximumLength, rootdirname)
                             self.documents.append(document)
 
-                            cont_id = []
                             b = document.getContext()
                             cur.execute("""SELECT "context_id" FROM context WHERE "context_name" = %s;  """, ([b]), )
                             cont_id = cur.fetchone()
 
-                            # update enrties in document table
+                            # update entries in document table
                             cur.execute('''
                             UPDATE document SET
                             "document_title" = %s, 
@@ -668,6 +642,9 @@ class Database(object):
             finally:
                 cur.close()
                 con.close()
+
+    def add_document(self):
+        return
 
     def delete_entry(self):
 
@@ -705,7 +682,6 @@ class Database(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-        con = None
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -726,7 +702,6 @@ class Database(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-        con = None
         con = connect("dbname=contextionary user=postgres password='password'")
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -826,7 +801,6 @@ class Database(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-        con = None
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -841,7 +815,6 @@ class Database(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-        con = None
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -857,7 +830,6 @@ class Database(object):
         from psycopg2 import connect
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-        con = None
         con = connect("dbname=contextionary user=postgres password=%s" % password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -907,7 +879,6 @@ class Database(object):
             new_cont_id = cur.fetchone()
             print(new_cont_id[0])
 
-            old_cont_id = []
             cur.execute('''SELECT "context_id" FROM "document" WHERE "document_id" = %s''', ([doc_n]))
             old_cont_id = cur.fetchone()
 
@@ -933,53 +904,36 @@ class Database(object):
                                 , (phr, doc_n, phr, old_cont_id[0])
                                 )
                     cur.execute(
-                        '''DELETE FROM "phrase_meaning" WHERE "phrase_count_per_context" <= 0 OR "phrase_count_per_context" IS NULL''')
+                        '''DELETE FROM "phrase_meaning" 
+                           WHERE "phrase_count_per_context" <= 0 OR "phrase_count_per_context" IS NULL''')
 
-                    cur.execute('''UPDATE "document" SET 
-                            "context_id" = %s
-                            WHERE "document_id" = %s''', (
-                        new_cont_id,
-                        doc_n
-                    ))
+                    cur.execute(
+                        '''UPDATE "document" SET "context_id" = %s
+                           WHERE "document_id" = %s''', (new_cont_id, doc_n))
 
                     cur.execute('''SELECT count(*) FROM "phrase_meaning" WHERE
                             "phrase_id" = %s
-                            AND "context_id" = %s''', (
-                        phr,
-                        new_cont_id
-                    ))
+                            AND "context_id" = %s''', (phr, new_cont_id))
                     exist = cur.fetchone()
 
                     if exist[0] == 0:
-                        #  print('not exists')
-                        cur.execute('''INSERT INTO "phrase_meaning" 
+                        cur.execute(
+                            '''INSERT INTO "phrase_meaning" 
                                 ("phrase_id", "context_id", "phrase_count_per_context")
-                                VALUES 
-                                (%s,
-                                %s,
-                                (SELECT SUM("phrase_count_per_document") 
+                                VALUES (%s, %s, (SELECT SUM("phrase_count_per_document") 
                                 FROM "phrase_origin" 
-                                WHERE ("phrase_id" = %s) AND ("document_id" IN (SELECT "document_id" FROM "document" WHERE "dontext_id" = %s)
-                                )))''', (
-                            phr,
-                            new_cont_id,
-                            phr,
-                            new_cont_id
-                        ))
-
-                    # print('New entry inserted to phrase meaning')
+                                WHERE ("phrase_id" = %s) 
+                                AND ("document_id" IN (SELECT "document_id" FROM "document" WHERE "dontext_id" = %s)
+                                )))''', (phr, new_cont_id, phr, new_cont_id))
 
                     else:
-                        # print('exists', exist[0])
                         cur.execute('''
                             UPDATE "phrase_meaning" 
                             SET "phrase_count_per_context" = (SELECT SUM("phrase_count_per_document") 
                             FROM "phrase_origin" 
                             WHERE "phrase_id" = %s AND ("document_id" IN (SELECT "document_id" FROM "document" WHERE "context_id" = %s)))
                             WHERE "phrase_id" = %s AND "context_id" = %s
-                            '''
-                                    , (phr, new_cont_id[0], phr, new_cont_id[0])
-                                    )
+                            ''', (phr, new_cont_id[0], phr, new_cont_id[0]))
 
                 print('Document context was changed')
 
