@@ -140,16 +140,13 @@ class Document(object):
 
         if not exists:
             cur.execute('''
-                        insert into "phrase_origin" 
+                        INSERT INTO "phrase_origin" 
                         ("phrase_id", "document_id", "phrase_count_per_document") 
-                        VALUES (
-                                %s,
-                                %s,
-                                %s)
-                        ''', (
-                phrase_id,
-                self.doc_id,
-                self.textProcessor.getPhraseCount()[length][phrase]))
+                        VALUES (%s, %s, %s)
+                        ''', (phrase_id,
+                              self.doc_id,
+                              self.textProcessor.getPhraseCount()[length][phrase])
+                        )
 
         cur.close()
         con.close()
@@ -278,7 +275,7 @@ class Database(object):
             self.create_tables()
             self.add_contexts()
 
-        self.add_documents()
+        # self.add_documents()
 
     def create(self):
 
@@ -553,75 +550,59 @@ class Database(object):
                     completed_list.append([context_id, context_immediate_parent_id, context_name,
                                            context_children_id, context_picture, context_level])
 
-    def add_documents(self):
+    def add_document(self, file_path):
+        print(file_path)
+        name = Path(file_path).parts[-1]
+        temp_name = '/' + name
+        root = file_path.split(temp_name)[0]
+        rootdirname = Path(root).parts[-1]
+        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()
+        doc_path = root.split('Context tree/')[1] + '/' + name
+        cur.execute(""" SELECT count(*) FROM document WHERE "document_path" = %s; """,
+                    ([doc_path]), )
+        docpathcount = cur.fetchone()
 
-        print("Updating documents.....")
+        try:
+            if name.endswith(".txt") and (docpathcount[0] == 0):
+                dummytitle = "_"
+                cur.execute(
+                    '''
+                    INSERT INTO document 
+                    ("document_title", "context_id", "document_content", "document_path") 
+                    VALUES (%s, %s, %s, %s)
+                    ''', (dummytitle, 1, 1, doc_path))
 
-        print(self.libraryFolderPath)
+                cur.execute("""SELECT "document_id" FROM document WHERE "document_title"=%s;""",
+                            ([dummytitle]), )
+                doc_id = cur.fetchone()
 
-        for root, dirs, files in os.walk(self.libraryFolderPath):
-            rootdirname = Path(root).parts[-1]
+                filelocation = os.path.join(root, name)
+                document = Document(doc_id, filelocation, self.phraseMaximumLength, rootdirname)
+                self.documents.append(document)
 
-            con = connect("dbname=contextionary user=postgres password=%s" % password)
-            con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-            cur = con.cursor()
+                b = document.getContext()
+                cur.execute("""SELECT "context_id" FROM context WHERE "context_name" = %s;  """, ([b]), )
+                cont_id = cur.fetchone()
 
-            cur.execute(""" SELECT count(*) FROM context WHERE "context_name" = %s; """,
-                        ([rootdirname]), )
-            dircount = cur.fetchone()
+                # update entries in document table
+                cur.execute(
+                    '''
+                    UPDATE document SET
+                    "document_title" = %s, 
+                    "context_id" = %s,
+                    "document_content" = %s,
+                    "document_path" = %s
+                    WHERE "document_id" = %s; 
+                    ''', (name, cont_id[0], document.getText(), doc_path, doc_id))
 
-            cur.execute(""" SELECT "context_children_id" FROM context WHERE "context_name" = %s; """,
-                        ([rootdirname]), )
-            childlist = cur.fetchone()
-
-            try:
-                if (dircount[0] > 0) and (childlist[0] == '0'):
-                    for name in files:
-                        doc_path = root.split('Context tree')[1][1:] + '/' + name
-                        cur.execute(""" SELECT count(*) FROM document WHERE "document_path" = %s; """,
-                                    ([doc_path]), )
-                        docpathcount = cur.fetchone()
-
-                        if name.endswith(".txt") and (docpathcount[0] == 0):
-                            dummytitle = "_"
-                            cur.execute('''
-                            INSERT INTO document 
-                            ("document_title", "context_id", "document_content", "document_path") 
-                            VALUES (%s, %s, %s, %s)''', (dummytitle, 1, 1, doc_path))
-
-                            cur.execute("""SELECT "document_id" FROM document WHERE "document_title"=%s;""",
-                                        ([dummytitle]), )
-                            doc_id = cur.fetchone()
-
-                            filelocation = os.path.join(root, name)
-                            document = Document(doc_id, filelocation, self.phraseMaximumLength, rootdirname)
-                            self.documents.append(document)
-
-                            b = document.getContext()
-                            cur.execute("""SELECT "context_id" FROM context WHERE "context_name" = %s;  """, ([b]), )
-                            cont_id = cur.fetchone()
-
-                            # update entries in document table
-                            cur.execute('''
-                            UPDATE document SET
-                            "document_title" = %s, 
-                            "context_id" = %s,
-                            "document_content" = %s,
-                            "document_path" = %s
-                            WHERE "document_id" = %s; ''',
-                                        (name, cont_id[0], document.getText(), doc_path, doc_id)
-                                        )
-
-                            # update entries in phrase table, phrase origin table and phrase meaning table
-                            document.updatePhraseTables()
-                            print('table document updated')
-
-            finally:
-                cur.close()
-                con.close()
-
-    def add_document(self):
-        return
+                # update entries in phrase table, phrase origin table and phrase meaning table
+                document.updatePhraseTables()
+                print('table document updated')
+        finally:
+            cur.close()
+            con.close()
 
     def delete_entry(self):
 

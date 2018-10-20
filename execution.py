@@ -19,38 +19,85 @@ database for the program, called "contextionary". The "contextionary" database c
 
 from contextionaryDatabase import Database
 import os
+from psycopg2 import connect
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from pathlib import Path
+from threading import Thread
+from queue import Queue, Empty
+import multiprocessing
+
 
 libraryName = "Human activity"
 projectPath = os.getcwd()
 phraseLength = 2
+password = 'postgres'
+dbname = 'contextionary'
+usr = 'postgres'
+
 createDatabase = 1
 db = Database(libraryName, phraseLength, projectPath, createDatabase)
 
-
-"""
-from contextionaryAnalytics import WordVectorSpace
-vectorSpace=WordVectorSpace()
-"""
-
-"""
-from readingComprehensionAssistant import TextComprehension
-
-text="Pope and catholic church"
-textComprehension=TextComprehension(text)
-#textComprehension.findContext()
-"""
+libraryFolderPath = db.libraryFolderPath
 
 
+def add_document_process(filepath):
+    db.add_document(filepath)
 
-"""
-Personal note:
-SELECT 
-    pg_terminate_backend(pid) 
-FROM 
-    pg_stat_activity 
-WHERE 
-    -- don't kill my own connection!
-    pid <> pg_backend_pid()
-    -- don't kill the connections to other databases
-    AND datname = 'contextionary'
-"""
+
+class AddDocumentThread(Thread):
+    def __init__(self, queue):
+        Thread.__init__(self)
+        self.queue = queue
+
+    def run(self):
+        while True:
+            try:
+                filepath = self.queue.get_nowait()
+                add_document_process(filepath)
+            except Empty:
+                break
+        return
+
+
+file_list = []
+
+for root, dirs, files in os.walk(libraryFolderPath):
+    rootdirname = Path(root).parts[-1]
+
+    con = connect("dbname=contextionary user=postgres password=%s" % password)
+    con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cur = con.cursor()
+
+    cur.execute(""" SELECT count(*) FROM context WHERE "context_name" = %s; """,
+                ([rootdirname]), )
+    dircount = cur.fetchone()
+
+    cur.execute(""" SELECT "context_children_id" FROM context WHERE "context_name" = %s; """,
+                ([rootdirname]), )
+    childlist = cur.fetchone()
+
+    try:
+        if (dircount[0] > 0) and (childlist[0] == '0'):
+            file_list.extend([[files, root]])
+
+    finally:
+        cur.close()
+        con.close()
+
+if __name__ == '__main__':
+
+    if file_list:
+        print("Updating documents.....")
+        q = Queue()
+        for files in file_list:
+            for file in files[0]:
+                q.put(files[1] + '/' + file)
+
+        new_threads = []
+        # for i in range(multiprocessing.cpu_count()):
+        t = AddDocumentThread(q)
+        t.start()
+        new_threads.append(t)
+
+        for thread in new_threads:
+            thread.join()
