@@ -501,9 +501,7 @@ class Database(object):
         try:
 
             data_list = []
-            level1 = ['Human activity']
-            level2 = ['Belief', 'Knowledge']
-            level3 = ['Astrology', 'Religion', 'Algebra', 'Oncology']
+            completed_list = []
 
             file = 'Context list.csv'
             with open(file) as csvfile:
@@ -512,28 +510,62 @@ class Database(object):
                 for row in reader:
                     data_list.append(row)
 
+            context_children_id_list1 = []
+            context_children_id_list2_all = []
+
             for data in data_list:
                 context_id = int(data[0])
                 context_immediate_parent_id = int(data[2])
                 context_name = data[1]
-                context_children_id = None
                 context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                context_level = None
 
-                if context_name in level1:
+                if context_immediate_parent_id == -1:
                     context_level = 1
-                    context_children_id = '2,3'
-                if context_name in level2:
+                    for sub_data in data_list:
+                        if context_id == int(sub_data[2]):
+                            context_children_id_list1.append(sub_data[0])
+                    context_children_id = ','.join(context_children_id_list1)
+                    completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                           context_children_id, context_picture, context_level])
+
+            for data in data_list:
+                for context_child_id in context_children_id_list1:
+                    context_id = int(data[0])
+                    context_immediate_parent_id = int(data[2])
+                    context_name = data[1]
+                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
                     context_level = 2
-                    index = level2.index(context_name)
-                    if index == 0:
-                        context_children_id = '6,7'
-                    if index == 1:
-                        context_children_id = '4,5'
-                if context_name in level3:
+
+                    context_children_id_list2 = []
+
+                    if context_id == int(context_child_id):
+                        for sub_data in data_list:
+                            if context_id == int(sub_data[2]):
+                                context_children_id_list2.append(sub_data[0])
+                        context_children_id = ','.join(context_children_id_list2)
+                        completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                               context_children_id, context_picture, context_level])
+                    context_children_id_list2_all.extend(context_children_id_list2)
+
+            for data in data_list:
+                for context_child_id in context_children_id_list2_all:
+                    context_id = int(data[0])
+                    context_immediate_parent_id = int(data[2])
+                    context_name = data[1]
+                    context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
                     context_level = 3
                     context_children_id = '0'
+                    if context_id == int(context_child_id):
+                        completed_list.append([context_id, context_immediate_parent_id, context_name,
+                                               context_children_id, context_picture, context_level])
 
+            for c_list in completed_list:
+                context_id = c_list[0]
+                context_immediate_parent_id = c_list[1]
+                context_name = c_list[2]
+                context_children_id = c_list[3]
+                context_picture = c_list[4]
+                context_level = c_list[5]
                 cur.execute('''insert into context 
                                 ("context_id", "context_immediate_parent_id", "context_name", "context_children_id", 
                                 "context_picture","context_level") 
