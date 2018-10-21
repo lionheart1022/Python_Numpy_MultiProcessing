@@ -37,7 +37,7 @@ phraseLength = 2
 password = 'postgres'
 dbname = 'contextionary'
 usr = 'postgres'
-time_variable = '10 seconds'  # minutes, hours, seconds, days
+time_variable = '5 seconds'  # minutes, hours, seconds, days
 
 start_time = time.time()
 createDatabase = 1
@@ -112,16 +112,21 @@ for root, dirs, files in os.walk(libraryFolderPath):
 def main():
     if file_list:
         print("Updating documents.....")
-        shuffle(file_list)
+        random_ordered_list = []
+
+        for files in file_list:
+            for file in files[0]:
+                if 'Linux' in platform.platform():
+                    random_ordered_list.append(files[1] + '/' + file)
+                else:
+                    random_ordered_list.append(files[1] + '\\' + file)
+
+        shuffle(random_ordered_list)
 
         while float(time.time() - start_time) <= float(time_variable_process(time_variable)):
             q = Queue()
-            for files in file_list:
-                for file in files[0]:
-                    if 'Linux' in platform.platform():
-                        q.put(files[1] + '/' + file)
-                    else:
-                        q.put(files[1] + '\\' + file)
+            for rand_file in random_ordered_list:
+                q.put(rand_file)
 
             new_threads = []
             t = AddDocumentThread(q)
