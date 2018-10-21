@@ -24,9 +24,11 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
 import multiprocessing
 from multiprocessing import Process
-from threading import Thread
+from threading import Thread, Event
 from queue import Queue, Empty
 import platform
+import time
+from random import shuffle
 
 
 libraryName = "Human activity"
@@ -35,11 +37,29 @@ phraseLength = 2
 password = 'postgres'
 dbname = 'contextionary'
 usr = 'postgres'
+time_variable = '10 seconds'  # minutes, hours, seconds, days
 
+start_time = time.time()
 createDatabase = 1
 db = Database(libraryName, phraseLength, projectPath, createDatabase)
 
 libraryFolderPath = db.libraryFolderPath
+
+stop_event = Event()
+
+
+def time_variable_process(t_var):
+    result_time = None
+    if 'seconds' in t_var:
+        result_time = int(t_var.split(' seconds')[0])
+    if 'minutes' in t_var:
+        result_time = int(t_var.split(' minutes')[0]) * 60
+    if 'hours' in t_var:
+        result_time = int(t_var.split(' hours')[0]) * 3600
+    if 'days' in t_var:
+        result_time = int(t_var.split(' days')[0]) * 3600 * 24
+
+    return result_time
 
 
 def add_document_process(filepath):
@@ -56,6 +76,8 @@ class AddDocumentThread(Thread):
             try:
                 filepath = self.queue.get_nowait()
                 add_document_process(filepath)
+                if stop_event.is_set():
+                    break
             except Empty:
                 break
         return
@@ -86,22 +108,34 @@ for root, dirs, files in os.walk(libraryFolderPath):
         cur.close()
         con.close()
 
-if __name__ == '__main__':
 
+def main():
     if file_list:
         print("Updating documents.....")
+        shuffle(file_list)
 
-        q = Queue()
-        for files in file_list:
-            for file in files[0]:
-                if 'Linux' in platform.platform():
-                    q.put(files[1] + '/' + file)
-                else:
-                    q.put(files[1] + '\\' + file)
+        while float(time.time() - start_time) <= float(time_variable_process(time_variable)):
+            q = Queue()
+            for files in file_list:
+                for file in files[0]:
+                    if 'Linux' in platform.platform():
+                        q.put(files[1] + '/' + file)
+                    else:
+                        q.put(files[1] + '\\' + file)
 
-        new_threads = []
-        t = AddDocumentThread(q)
-        t.start()
-        new_threads.append(t)
-        for thread in new_threads:
-            thread.join()
+            new_threads = []
+            t = AddDocumentThread(q)
+            new_threads.append(t)
+            t.start()
+
+            for t in new_threads:
+                t.join(float(time_variable_process(time_variable)) - float(time.time() - start_time))
+        else:
+            stop_event.set()
+            print("Timed Out")
+
+
+if __name__ == '__main__':
+    main()
+    end_time = time.time()
+    print("Execution Time:", str(end_time - start_time))
