@@ -463,32 +463,82 @@ class Database(object):
             completed_list = []
 
             file = 'Context list.csv'
-            with open(file) as csvfile:
+            with open(file, encoding="latin-1") as csvfile:
                 reader = csv.reader(csvfile)
                 next(reader)
                 for row in reader:
                     data_list.append(row)
 
-            context_children_id_list1 = []
+            context_children_id_list1_all = []
             context_children_id_list2_all = []
             context_children_id_list3_all = []
             context_children_id_list4_all = []
+            context_children_id_list5_all = []
+            context_children_id_list6_all = []
+            context_children_id_list7_all = []
+            context_children_id_list8_all = []
+            context_children_id_list9_all = []
+            context_children_id_list10_all = []
+            context_children_id_list11_all = []
+            context_children_id_list12_all = []
+            context_children_id_list13_all = []
+            context_children_id_list14_all = []
+            context_children_id_list15_all = []
+            context_children_id_list16_all = []
 
-            self.get_parent_id(data_list, context_children_id_list1, completed_list)
+            self.get_parent_id(data_list, context_children_id_list1_all, completed_list)
 
-            self.get_sub_child_id(data_list, context_children_id_list1, context_children_id_list2_all, completed_list)
+            self.get_sub_child_id(data_list, context_children_id_list1_all, context_children_id_list2_all, completed_list, 2)
 
-            self.get_sub_child_id(data_list, context_children_id_list2_all, context_children_id_list3_all, completed_list)
+            self.get_sub_child_id(data_list, context_children_id_list2_all, context_children_id_list3_all, completed_list, 3)
 
-            self.get_sub_child_id(data_list, context_children_id_list3_all, context_children_id_list4_all, completed_list)
+            self.get_sub_child_id(data_list, context_children_id_list3_all, context_children_id_list4_all, completed_list, 4)
 
-            self.get_last_child_id(data_list, context_children_id_list4_all, completed_list)
+            self.get_sub_child_id(data_list, context_children_id_list4_all, context_children_id_list5_all,
+                                  completed_list, 5)
+
+            self.get_sub_child_id(data_list, context_children_id_list5_all, context_children_id_list6_all,
+                                  completed_list, 6)
+
+            self.get_sub_child_id(data_list, context_children_id_list6_all, context_children_id_list7_all,
+                                  completed_list, 7)
+
+            self.get_sub_child_id(data_list, context_children_id_list7_all, context_children_id_list8_all,
+                                  completed_list, 8)
+
+            self.get_sub_child_id(data_list, context_children_id_list8_all, context_children_id_list9_all,
+                                  completed_list, 9)
+
+            self.get_sub_child_id(data_list, context_children_id_list9_all, context_children_id_list10_all,
+                                  completed_list, 10)
+
+            self.get_sub_child_id(data_list, context_children_id_list10_all, context_children_id_list11_all,
+                                  completed_list, 11)
+
+            self.get_sub_child_id(data_list, context_children_id_list11_all, context_children_id_list12_all,
+                                  completed_list, 12)
+
+            self.get_sub_child_id(data_list, context_children_id_list12_all, context_children_id_list13_all,
+                                  completed_list, 13)
+
+            self.get_sub_child_id(data_list, context_children_id_list13_all, context_children_id_list14_all,
+                                  completed_list, 14)
+
+            self.get_sub_child_id(data_list, context_children_id_list14_all, context_children_id_list15_all,
+                                  completed_list, 15)
+
+            self.get_sub_child_id(data_list, context_children_id_list15_all, context_children_id_list16_all,
+                                  completed_list, 16)
+
+            self.get_last_child_id(data_list, context_children_id_list16_all, completed_list, 17)
 
             for c_list in completed_list:
                 context_id = c_list[0]
                 context_immediate_parent_id = c_list[1]
                 context_name = c_list[2]
                 context_children_id = c_list[3]
+                if not context_children_id:
+                    context_children_id = 0
                 context_picture = c_list[4]
                 context_level = c_list[5]
                 cur.execute('''insert into context 
@@ -518,14 +568,14 @@ class Database(object):
                 completed_list.append([context_id, context_immediate_parent_id, context_name,
                                        context_children_id, context_picture, context_level])
 
-    def get_sub_child_id(self, data_list, context_children_id_list, context_child_id_total, completed_list):
+    def get_sub_child_id(self, data_list, context_children_id_list, context_child_id_total, completed_list, level):
         for data in data_list:
             for context_child_id in context_children_id_list:
                 context_id = int(data[0])
                 context_immediate_parent_id = int(data[2])
                 context_name = data[1]
                 context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                context_level = 2
+                context_level = level
 
                 context_children_id_list2 = []
 
@@ -538,14 +588,14 @@ class Database(object):
                                            context_children_id, context_picture, context_level])
                 context_child_id_total.extend(context_children_id_list2)
 
-    def get_last_child_id(self, data_list, context_children_id_list, completed_list):
+    def get_last_child_id(self, data_list, context_children_id_list, completed_list, level):
         for data in data_list:
             for context_child_id in context_children_id_list:
                 context_id = int(data[0])
                 context_immediate_parent_id = int(data[2])
                 context_name = data[1]
                 context_picture = '{}-{}.jpg'.format(str(context_id), context_name)
-                context_level = 3
+                context_level = level
                 context_children_id = '0'
                 if context_id == int(context_child_id):
                     completed_list.append([context_id, context_immediate_parent_id, context_name,
