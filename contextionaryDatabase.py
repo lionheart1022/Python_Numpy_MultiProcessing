@@ -471,12 +471,18 @@ class Database(object):
 
             context_children_id_list1 = []
             context_children_id_list2_all = []
+            context_children_id_list3_all = []
+            context_children_id_list4_all = []
 
             self.get_parent_id(data_list, context_children_id_list1, completed_list)
 
             self.get_sub_child_id(data_list, context_children_id_list1, context_children_id_list2_all, completed_list)
 
-            self.get_last_child_id(data_list, context_children_id_list2_all, completed_list)
+            self.get_sub_child_id(data_list, context_children_id_list2_all, context_children_id_list3_all, completed_list)
+
+            self.get_sub_child_id(data_list, context_children_id_list3_all, context_children_id_list4_all, completed_list)
+
+            self.get_last_child_id(data_list, context_children_id_list4_all, completed_list)
 
             for c_list in completed_list:
                 context_id = c_list[0]
