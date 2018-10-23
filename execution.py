@@ -29,19 +29,15 @@ from queue import Queue, Empty
 import platform
 import time
 from random import shuffle
+import config
 
 
 libraryName = "Human activity"
 projectPath = os.getcwd()
-phraseLength = 2
-password = 'postgres'
-dbname = 'contextionary'
-usr = 'postgres'
-time_variable = '5 seconds'  # minutes, hours, seconds, days
 
 start_time = time.time()
 createDatabase = 1
-db = Database(libraryName, phraseLength, projectPath, createDatabase)
+db = Database(libraryName, config.PARSE['phraseLength'], projectPath, createDatabase)
 
 libraryFolderPath = db.libraryFolderPath
 
@@ -88,7 +84,9 @@ file_list = []
 for root, dirs, files in os.walk(libraryFolderPath):
     rootdirname = Path(root).parts[-1]
 
-    con = connect("dbname=contextionary user=postgres password=%s" % password)
+    con = connect(dbname=config.DATABASE['dbname'],
+                  user=config.DATABASE['user'],
+                  password=config.DATABASE['password'])
     con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     cur = con.cursor()
 
@@ -123,7 +121,7 @@ def main():
 
         shuffle(random_ordered_list)
 
-        while float(time.time() - start_time) <= float(time_variable_process(time_variable)):
+        while float(time.time() - start_time) <= float(time_variable_process(config.PARSE['executionTime'])):
             q = Queue()
             for rand_file in random_ordered_list:
                 q.put(rand_file)
@@ -134,7 +132,7 @@ def main():
             t.start()
 
             for t in new_threads:
-                t.join(float(time_variable_process(time_variable)) - float(time.time() - start_time))
+                t.join(float(time_variable_process(config.PARSE['executionTime'])) - float(time.time() - start_time))
         else:
             stop_event.set()
             print("Timed Out")

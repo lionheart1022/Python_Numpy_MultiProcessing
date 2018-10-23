@@ -3,51 +3,47 @@
 Created on Tue Jun  5 21:41:59 2018
 
 @author: seniortasse
-"""
 
-"""
 As a first step, we need to establish a connection to the "contextionary" database
 "contextionary" database is a database of phrases and their contexts organized into multiple
 tables including:
 """
+
+import config
 from psycopg2 import connect 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
-con = None 
-con = connect("dbname=contextionary user=postgres password='seniortasse'")
+
+con = connect(dbname=config.DATABASE['dbname'],
+              user=config.DATABASE['user'],
+              password=config.DATABASE['password'])
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
+
 class TextComprehension(object):
-   
-    
-    def __init__(self,text,phraseMaxLength=5):
+
+    def __init__(self, text, phraseMaxLength=config.PARSE['phraseLength']):
         
         from textProcessing import TextProcessor
         
-        self.text=text
-        self.phraseMaxLength=phraseMaxLength
-        self.textProcessor=TextProcessor(self.text,self.phraseMaxLength)
-        self.phraseCount=self.textProcessor.getPhraseCount()
-        self.wordOrderedList=self.textProcessor.getWordOrderedList()
+        self.text = text
+        self.phraseMaxLength = phraseMaxLength
+        self.textProcessor = TextProcessor(self.text, self.phraseMaxLength)
+        self.phraseCount = self.textProcessor.getPhraseCount()
+        self.wordOrderedList = self.textProcessor.getWordOrderedList()
         print(self.wordOrderedList)
-        self.contextMatch=dict()
-        self.contextAndKeywords=dict()
+        self.contextMatch = dict()
+        self.contextAndKeywords = dict()
         
         self.findContextAndKeywords()
-        
-        
-        
+
     def findContextAndKeywords(self):
-     
-        
         self.findContext()
         self.findKeywords()
         
         print(self.contextAndKeywords)
         
         return self.contextAndKeywords
-    
-    
-        
+
     def findContext(self):
         
         cur = con.cursor()
@@ -58,32 +54,28 @@ class TextComprehension(object):
         contextRanking=[]
         
         for contextID in contextIDList:
-            self.contextMatch.update({contextID[0]:0})
-            
-          
+            self.contextMatch.update({contextID[0]: 0})
         
-        for phraseLength in range(1,self.phraseMaxLength+1):
+        for phraseLength in range(1, self.phraseMaxLength+1):
             for phrase in self.phraseCount[phraseLength]:
                 cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s; """, ([phrase]))
                 phraseID = cur.fetchall()
                 if phraseID:
                     for contextID in contextIDList:
-                        cur.execute(""" SELECT "phrase_weight" FROM "phrase_weight_by_context" WHERE "phrase_id" = %s AND "context_id"=%s; """, [phraseID[0][0],contextID[0]])
+                        cur.execute("""SELECT "phrase_weight" FROM "phrase_weight_by_context" WHERE "phrase_id" = %s AND "context_id"=%s; """, [phraseID[0][0],contextID[0]])
                         weight = cur.fetchall()
                         if weight:
                             self.contextMatch[contextID[0]] = self.contextMatch.get(contextID[0], 0) + weight[0][0] * self.phraseCount[phraseLength][phrase]
         
         print(self.contextMatch)  
-        ######### revised 06/18/2018
-        ### TASK 4
+
         cur = con.cursor()
         cur.execute("""DELETE FROM "input_text_context_identifier";""")
         cur = con.cursor()
         cur.execute("""DELETE FROM "input_text_word_position";""")
         cur = con.cursor()
         cur.execute("""DELETE FROM "input_text_keywords";""")
-        
-        ### TASK 5
+
         # set input text ID
         inputTextID = 1
         
@@ -99,24 +91,22 @@ class TextComprehension(object):
             
             # update --input text context identifier-- table
             cur = con.cursor()
-            cur.execute(""" INSERT INTO "input_text_context_identifier" ("input_text_id", "context_id", "context_weight") VALUES (%s,%s,%s); """, [inputTextID, contextID, likelyContextMatch[contextID]])
+            cur.execute(""" INSERT INTO "input_text_context_identifier" 
+                       ("input_text_id", "context_id", "context_weight") 
+                       VALUES (%s,%s,%s); """, [inputTextID, contextID, likelyContextMatch[contextID]])
             topContexts.append(contextID)
             contextRanking.append(likelyContextMatch[contextID])
-        
-        
-        self.contextAndKeywords.update({"Top contexts":topContexts})
-        self.contextAndKeywords.update({"Context ranking":contextRanking})
-        #########
+
+        self.contextAndKeywords.update({"Top contexts": topContexts})
+        self.contextAndKeywords.update({"Context ranking": contextRanking})
     
     def findKeywords(self):
-        
-       
+
         keywordContext=[]        
         keywordOrder=[]
         keywordLocation=[]
         keywordPhraseID=[]
-        ######### revised 06/18/2018
-        ### TASK 6
+
         # set input text ID
         inputTextID = 1
 
@@ -125,8 +115,7 @@ class TextComprehension(object):
             # update --input text word position-- table
             cur = con.cursor()
             cur.execute(""" INSERT INTO "input_text_word_position" ("input_text_id", "word_position", "word_text") VALUES (%s,%s,%s); """, [inputTextID, i+1, self.wordOrderedList[i]])
-            
-        ### TASK 7
+
         # get contexts from --input text context identifier--
         cur = con.cursor()
         cur.execute(""" SELECT "context_id" from "input_text_context_identifier"; """)
@@ -188,15 +177,11 @@ class TextComprehension(object):
                     keywordOrder.append(keywordID)
                     keywordLocation.append(keywordLocation)
                     keywordPhraseID.append(phraseID[0])
-                    
-        
-        
-        self.contextAndKeywords.update({"Keyword context":keywordContext})
-        self.contextAndKeywords.update({"Keyword order":keywordOrder})
-        self.contextAndKeywords.update({"Keyword location":keywordLocation})
-        self.contextAndKeywords.update({"Keyword phrase ID":keywordPhraseID})
-        #########
+
+        self.contextAndKeywords.update({"Keyword context": keywordContext})
+        self.contextAndKeywords.update({"Keyword order": keywordOrder})
+        self.contextAndKeywords.update({"Keyword location": keywordLocation})
+        self.contextAndKeywords.update({"Keyword phrase ID": keywordPhraseID})
     
-    def __str__(self):    
-        
+    def __str__(self):
         return "I am the Phrase class"
