@@ -28,6 +28,7 @@ from psycopg2 import connect
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
 import platform
+import config
 
 
 class Document(object):
@@ -254,9 +255,9 @@ class Database(object):
         5- the -documents- is the list of all documents
         """
 
-        self.usr = 'postgres'
-        self.password = password
-        self.dbname = 'contextionary'
+        self.usr = config.DATABASE['user']
+        self.password = config.DATABASE['password']
+        self.dbname = config.DATABASE['dbname']
 
         self.libraryName = libraryName
         self.phraseMaximumLength = phraseMaximumLength
@@ -265,12 +266,23 @@ class Database(object):
         self.documents = []
 
         if createDatabase == 1:
-            self.drop()
+            if self.database_exist():
+                self.drop()
             self.create()
             self.create_tables()
             self.add_contexts()
 
-        # self.add_documents()
+    def database_exist(self):
+        con = connect(user=self.usr, host='localhost', password=self.password)
+        con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        cur = con.cursor()
+        try:
+            cur.execute('SELECT datname FROM pg_catalog.pg_database WHERE datname = "contextionary"')
+            return True
+        finally:
+            cur.close()
+            con.close()
+            return False
 
     def create(self):
 
