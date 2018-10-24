@@ -75,7 +75,8 @@ class AddDocumentThread(Thread):
                 if stop_event.is_set():
                     break
             except Empty:
-                break
+                print("Execution Time:", str(time.time() - start_time))
+                os._exit(10)
         return
 
 

@@ -7,7 +7,7 @@ DATABASE = {
 
 PARSE = {
     'phraseLength': 5,
-    'executionTime': '30 seconds',  # minutes, hours, seconds, days
+    'executionTime': '60 seconds',  # minutes, hours, seconds, days
     'distancePercentile': 10,
     'bondingIndexPercentile': 90
 }
