@@ -21,7 +21,7 @@ con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
 class TextComprehension(object):
 
-    def __init__(self, text, phraseMaxLength=config.PARSE['phraseLength']):
+    def __init__(self, text, phraseMaxLength=5):
         
         from textProcessing import TextProcessor
         
