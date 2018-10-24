@@ -277,12 +277,12 @@ class Database(object):
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
-            cur.execute('SELECT datname FROM pg_catalog.pg_database WHERE datname = "contextionary"')
-            return True
+            cur.execute("SELECT datname FROM pg_catalog.pg_database WHERE datname = 'contextionary';")
+            result = bool(cur.rowcount)
         finally:
             cur.close()
             con.close()
-            return False
+            return result
 
     def create(self):
 

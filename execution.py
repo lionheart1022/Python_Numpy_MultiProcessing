@@ -36,7 +36,7 @@ libraryName = "Human activity"
 projectPath = os.getcwd()
 
 start_time = time.time()
-createDatabase = 0
+createDatabase = 1
 db = Database(libraryName, config.PARSE['phraseLength'], projectPath, createDatabase)
 
 libraryFolderPath = db.libraryFolderPath
