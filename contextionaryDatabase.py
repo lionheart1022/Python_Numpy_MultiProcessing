@@ -462,7 +462,8 @@ class Database(object):
             data_list = []
             completed_list = []
 
-            file = 'Context list.csv'
+            # file = 'Context list.csv'
+            file = 'Context list_simple.csv'
             with open(file, encoding="latin-1") as csvfile:
                 reader = csv.reader(csvfile)
                 next(reader)
