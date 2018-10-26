@@ -470,6 +470,10 @@ class WordVectorSpace(object):
                 cur.execute("""INSERT INTO "phrase_vector_space" ("phrase_id", "context_id", "phrase_relative_frequency")
                                 VALUES (%s,%s,%s)""", ([phraseID, ICID, self.phraseVectorSpaceMatrix[(i,j)]]))
 
+        print("Phrase vector space matrix")
+        print (self.phraseVectorSpaceMatrix)
+        
+    
     """
     buildContextAxisMatrix method creates an array containing each phrase vector with coordinates
     on each independent context axis.
@@ -496,18 +500,22 @@ class WordVectorSpace(object):
         cur = con.cursor()
         cur.execute("""DELETE FROM "context_axis";""")
         
-        cur = con.cursor()
-        cur.execute(""" SELECT "context_id" FROM "context" WHERE "context_children_id" = %s; """, (['0']))
-        independentContextID = cur.fetchall()
-        independentContextID = list([x[0] for x in independentContextID])
-        for contextID in self.contexts.keys():
-            i = self.contexts[contextID].getRCIndex()
-            for ICID in independentContextID:
-                j = self.contexts[ICID].getICIndex()
-                cur = con.cursor()
-                cur.execute("""INSERT INTO "context_axis" ("context_id", "independent_context_id", "axis_coordinate")
-                VALUES (%s,%s,%s)""", ([contextID, ICID, int(self.contextAxisMatrix[i][j])]))
-
+        #cur = con.cursor()
+        #cur.execute(""" SELECT "context_id" FROM "context" WHERE "context_children_id" = %s; """, (['0']))
+        #independentContextID = cur.fetchall()
+        #independentContextID = list([x[0] for x in independentContextID])
+        #for contextID in self.contexts.keys():
+        #    i = self.contexts[contextID].getRCIndex()
+        #    for ICID in independentContextID:
+        #        j = self.contexts[ICID].getICIndex()
+        #        cur = con.cursor()
+        #        cur.execute("""INSERT INTO "context_axis" ("context_id", "independent_context_id", "axis_coordinate")
+        #        VALUES (%s,%s,%s)""", ([contextID, ICID, int(self.contextAxisMatrix[i][j])]))
+    
+        print("context axis matrix")
+        print (self.contextAxisMatrix)
+        
+        
     """
     buildDistanceToContextMatrix creates an array containing each phrase distance to each context,
     dependent or independent. 
@@ -543,6 +551,7 @@ class WordVectorSpace(object):
             j = 0
             phraseVector = self.phraseVectorSpaceMatrix[i]
             phraseVector.shape = (phraseVector.size, 1)
+         
       
             for contextID in self.contexts.keys():
                 self.distanceToContextMatrix[i][j] = self.calculateDistancePhraseToContext(phraseVector,
@@ -647,6 +656,7 @@ class WordVectorSpace(object):
         phraseProjection = np.dot(P, phraseVector)
         
         return np.linalg.norm(phraseVector-phraseProjection)
+    
 
     def buildPhraseWeightByContextMatrix(self):
          
@@ -672,9 +682,11 @@ class WordVectorSpace(object):
         FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
         I BELIEVE VECTORIZATION IS MORE APPROPRIATE AND ELEGANT
         """
+        
         for contextID in self.contexts.keys():
             context = self.contexts[contextID]
             j = context.getRCIndex()
+            print("context id: %s, context name: %s" %(contextID,context.getName()))
              
             #print("the context --%s-- has the following lexical set --%s--" %(context.getName(),context.getLexicalSet()))
             for phraseID in self.phrases.keys():
