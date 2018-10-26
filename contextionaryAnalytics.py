@@ -301,7 +301,7 @@ class WordVectorSpace(object):
         """
 
         cur = con.cursor()
-        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=2;""")
+        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=3;""")
         phraseIDList = cur.fetchall()
         
         print("how many phrases should we deal with?")
@@ -312,10 +312,14 @@ class WordVectorSpace(object):
         """
         
         compteur = 0
+        
+        
+        """
+        FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
+        """
         for phraseID in phraseIDList:
 
             compteur += 1
-            print(phraseID)
 
             """
             - phraseName is the name of the phrase as recorded in the phrase table of the contextionary database
@@ -333,6 +337,7 @@ class WordVectorSpace(object):
 
             phraseCountPerContext = dict()
             for contextID in self.contexts.keys():
+                
                 phraseCountPerContext.update({contextID: 0})
                 
             documentPerContext = [[]]*len(self.contexts)
@@ -527,7 +532,12 @@ class WordVectorSpace(object):
         c = len(self.contexts)
         
         self.distanceToContextMatrix = np.zeros((p, c))
-     
+        
+        
+        """
+        FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
+        I BELIEVE VECTORIZATION IS MORE APPROPRIATE AND ELEGANT
+        """
         for phraseID in self.phrases.keys():
             i = self.phrases[phraseID].getIndex()
             j = 0
@@ -537,13 +547,32 @@ class WordVectorSpace(object):
             for contextID in self.contexts.keys():
                 self.distanceToContextMatrix[i][j] = self.calculateDistancePhraseToContext(phraseVector,
                                                                                            self.contexts[contextID])
+                
+                
+                """
+                 Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
+                 --contextionary-- database
+                """    
+                cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
+                VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
+                
                 j += 1
+        
+        
+        
+        
+        """
+        BELOW TO DELETE
+        """
         
         """
         Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
         --contextionary-- database
         """    
-        counter = 0
+        
+        #counter = 0
+        
+        """
         for phraseID in self.phrases.keys():
             counter += 1
             if counter % 1000:
@@ -553,9 +582,12 @@ class WordVectorSpace(object):
             for contextID in self.contexts.keys():
                 j = self.contexts[contextID].getRCIndex()
                 cur = con.cursor()
-                cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
-                VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
-
+        """
+        #        cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
+        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
+        
+        
+        
         print("distance to context matrix")
         print(self.distanceToContextMatrix)
         """
@@ -634,11 +666,16 @@ class WordVectorSpace(object):
         
         #maxDistance=np.amax(self.distanceToContextMatrix)
         maxFrequency = np.amax(self.phraseVectorSpaceMatrix)
-
+      
+        
+        """
+        FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
+        I BELIEVE VECTORIZATION IS MORE APPROPRIATE AND ELEGANT
+        """
         for contextID in self.contexts.keys():
             context = self.contexts[contextID]
             j = context.getRCIndex()
-
+             
             #print("the context --%s-- has the following lexical set --%s--" %(context.getName(),context.getLexicalSet()))
             for phraseID in self.phrases.keys():
                 phrase = self.phrases[phraseID]
