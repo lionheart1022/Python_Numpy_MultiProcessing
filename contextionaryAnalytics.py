@@ -105,16 +105,16 @@ class WordVectorSpace(object):
         self.buildPhraseVectorSpaceMatrix()
         print("build context axis matrix....")
         self.buildContextAxisMatrix()
-        print("build distance to context matrix....")
-        self.buildDistanceToContextMatrix()
+        # print("build distance to context matrix....")
+        # self.buildDistanceToContextMatrix()
 
-        print("create context lexical set....")
-        self.createContextLexicalSet()
-        print("create phrase lexical set....")
-        self.createPhraseLexicalSet()
-
-        print("build phrase weight by context matrix....")
-        self.buildPhraseWeightByContextMatrix()
+        # print("create context lexical set....")
+        # self.createContextLexicalSet()
+        # print("create phrase lexical set....")
+        # self.createPhraseLexicalSet()
+        #
+        # print("build phrase weight by context matrix....")
+        # self.buildPhraseWeightByContextMatrix()
 
         """
         print("update shared word....")
@@ -523,121 +523,17 @@ class WordVectorSpace(object):
     on the --contextionary-- database.
     Finally, the method calculates and assigns the lexical set boundary for each context. 
     """
-    def buildDistanceToContextMatrix(self):  
-
-        """
-        Delete all existing entries of table "phrase_distance_to_context".
-        """
+    def buildDistanceToContextMatrix(self, phraseID, phraseVector, i):
         cur = con.cursor()
-        cur.execute("""DELETE FROM "phrase_distance_to_context";""")
-
-        """
-        The matrix is updated with the distance between each phrase and each context
-        """
-        import numpy as np
-        
-        p = len(self.phrases)
-        c = len(self.contexts)
-        
-        self.distanceToContextMatrix = np.zeros((p, c))
-        
-        
-        """
-        FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
-        I BELIEVE VECTORIZATION IS MORE APPROPRIATE AND ELEGANT
-        """
-        for phraseID in self.phrases.keys():
-            i = self.phrases[phraseID].getIndex()
-            j = 0
-            phraseVector = self.phraseVectorSpaceMatrix[i]
-            phraseVector.shape = (phraseVector.size, 1)
-         
-      
-            for contextID in self.contexts.keys():
-                self.distanceToContextMatrix[i][j] = self.calculateDistancePhraseToContext(phraseVector,
-                                                                                           self.contexts[contextID])
-                
-                
-                """
-                 Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
-                 --contextionary-- database
-                """    
-                cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
-                VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
-                
-                j += 1
-        
-        
-        
-        
-        """
-        BELOW TO DELETE
-        """
-        
-        """
-        Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
-        --contextionary-- database
-        """    
-        
-        #counter = 0
-        
-        """
-        for phraseID in self.phrases.keys():
-            counter += 1
-            if counter % 1000:
-                print(counter)
-                print("Phrase: %s" % phraseID)
-            i = self.phrases[phraseID].getIndex()
-            for contextID in self.contexts.keys():
-                j = self.contexts[contextID].getRCIndex()
-                cur = con.cursor()
-        """
-        #        cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
-        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
-        
-        
-        
-        print("distance to context matrix")
-        print(self.distanceToContextMatrix)
-        """
-        For each context, calculate and assign its lexical set boundary .
-        The lexical set of a context represents a select list of phrases from
-        all phrases used in the context. That select list is the group of phrases
-        that are the closest in term of distance to the context. 
-        The 10% closest phrases to the context will be defined as the context lexical set.
-        This value is assumed and a lower or higher value can be chosen based on experience.
-        The assumption made here is that about 19% of the words we use in a speech or a text are purely
-        contextual and the rest is general. It can be argued that the actual number is higher and can
-        be as high as 20%.
-        The distance above which any phrase is not part of the lexical set is called
-        the lexical set boundary and is calculate as the context phrases 10% distance percentile.
-        """
+        j = 0
         for contextID in self.contexts.keys():
-                
-            context = self.contexts[contextID]
-            j = context.getRCIndex()
-            
-            distance = []
-            for phraseID in self.phrases.keys():
-                phrase = self.phrases[phraseID]
-                i = phrase.getIndex()
-      
-                """
-                if the phrase exists in the context
-                """
-                if phrase.getPhraseCountPerContext()[contextID]>0:
-                    distance.append(self.distanceToContextMatrix[i,j])
-            
-            if not distance:
-                context.setLexicalSetBoundary(0)
-            else:
-                boundary = np.percentile(distance, self.distancePercentile)
-                context.setLexicalSetBoundary(boundary)
+            self.distanceToContextMatrix[i][j] = self.calculateDistancePhraseToContext(phraseVector,
+                                                                                       self.contexts[contextID])
+            cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
+            VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
 
-    """
-    The distance between a vector and an axis is simply the norm of the difference
-    between that vector and its orthogonal projection on the axis
-    """
+            j += 1
+
     def calculateDistancePhraseToContext(self, phraseVector, context):
 
         import numpy as np
