@@ -302,7 +302,7 @@ class WordVectorSpace(object):
         """
 
         cur = con.cursor()
-        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=3;""")
+        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=10;""")
         phraseIDList = cur.fetchall()
         
         print("how many phrases should we deal with?")
@@ -473,6 +473,7 @@ class WordVectorSpace(object):
 
         print("Phrase vector space matrix")
         print (self.phraseVectorSpaceMatrix)
+        
     
     """
     buildContextAxisMatrix method creates an array containing each phrase vector with coordinates
@@ -493,8 +494,9 @@ class WordVectorSpace(object):
             contextAxis.append(self.contexts[contextID].getAxis())
         self.contextAxisMatrix = np.array(contextAxis)
         
-        print("context axis matrix")
-        print (self.contextAxisMatrix)
+        print("context axis matrix element size in byte and total size in MB")
+        print (self.contextAxisMatrix.itemsize)
+        print (self.contextAxisMatrix.itemsize * self.contextAxisMatrix.size/1000000)
   
         """
         Delete all existing entries of table "context axis".
@@ -516,6 +518,9 @@ class WordVectorSpace(object):
         #       cur.execute("""INSERT INTO "context_axis" ("context_id", "independent_context_id", "axis_coordinate")
         #       VALUES (%s,%s,%s)""", ([contextID, ICID, int(self.contextAxisMatrix[i][j])]))
         #print("Finish inserting context axis coordinates into database")
+        
+        print("Context axis matrix")
+        print (self.contextAxisMatrix)
         
     
     """
@@ -539,24 +544,15 @@ class WordVectorSpace(object):
         import numpy as np
         import time
         
-        p = len(self.phrases)
-        c = len(self.contexts)
+        #p = len(self.phrases)
+        #c = len(self.contexts)
         distancematricestarttime=time.time()
         
-        self.distanceToContextMatrix = np.zeros((p, c))
-        
-        """
-        FOR-LOOP IS TOO LONG. NEED AN ALTERNATIVE. VECTORIZATION? MULTIPROCESSING?
-        I BELIEVE VECTORIZATION IS MORE APPROPRIATE AND ELEGANT
-        """
-     
-        #np.concatenate(np.apply_along_axis(self.buildHMatrix,1,self.contextAxisMatrix),0)
-        myHMatrix=np.concatenate(np.apply_along_axis(self.buildHMatrix,1,self.contextAxisMatrix),0)
-      
-        
-        print("HMatrix")
-        print(myHMatrix)
-        self.distanceToContextMatrix=np.concatenate(np.apply_along_axis(self.calculateDistancePhraseToContext,1,self.phraseVectorSpaceMatrix,myHMatrix),1).T
+        #self.distanceToContextMatrix = np.zeros((p, c))
+
+
+        normContextAxisMatrix = self.contextAxisMatrix / np.linalg.norm(self.contextAxisMatrix, axis=1).reshape(-1,1) ** 2
+        self.distanceToContextMatrix=np.concatenate(np.apply_along_axis(self.calculateDistancePhraseToContext, 1, self.phraseVectorSpaceMatrix, self.contextAxisMatrix, normContextAxisMatrix), 0)
             
       
             
@@ -570,26 +566,26 @@ class WordVectorSpace(object):
         --contextionary-- database
         """    
         
-        insertdistanceindatabaseStarttime=time.time()
+        #insertdistanceindatabaseStarttime=time.time()
         
-        counter = 0
+        #counter = 0
         
-        for phraseID in self.phrases.keys():
-            counter += 1
-            if counter % 1000:
-                print(counter)
-                print("Phrase: %s" % phraseID)
-            i = self.phrases[phraseID].getIndex()
-            for contextID in self.contexts.keys():
-                j = self.contexts[contextID].getRCIndex()
-                cur = con.cursor()
+        #for phraseID in self.phrases.keys():
+        #    counter += 1
+        #    if counter % 1000:
+        #        print(counter)
+        #        print("Phrase: %s" % phraseID)
+        #    i = self.phrases[phraseID].getIndex()
+        #    for contextID in self.contexts.keys():
+        #        j = self.contexts[contextID].getRCIndex()
+        #        cur = con.cursor()
+        #
+        #        cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
+        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
         
-                cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
-                VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
+        #insertdistanceindatabaseEndtime=time.time()
         
-        insertdistanceindatabaseEndtime=time.time()
-        
-        print("Time to insert phrase distance to context into database: %s" %(insertdistanceindatabaseStarttime-insertdistanceindatabaseEndtime))
+        #print("Time to insert phrase distance to context into database: %s" %(insertdistanceindatabaseStarttime-insertdistanceindatabaseEndtime))
         
         print("distance to context matrix")
         print(self.distanceToContextMatrix)
@@ -632,46 +628,32 @@ class WordVectorSpace(object):
     The distance between a vector and an axis is simply the norm of the difference
     between that vector and its orthogonal projection on the axis
     """
-    def calculateDistancePhraseToContext(self, phraseVectorRow,myHMatrix):
+    def calculateDistancePhraseToContext(self, phraseVectorRow, contextAxisMatrix, normContextAxisMatrix):
         
-        n=int(myHMatrix.shape[0]/myHMatrix.shape[1])
-        normVector=np.zeros((n,1))
-        phraseVectorRow.shape=(len(phraseVectorRow), 1)
-        
-        print("n: %s" %n)
-        for i in range(0,n):
-            phraseProjection = np.dot(myHMatrix[(i*myHMatrix.shape[1]):(i*myHMatrix.shape[1])+myHMatrix.shape[1],:], phraseVectorRow)
-            normVector[i]=np.linalg.norm(phraseVectorRow-phraseProjection)
-            print("i: %s" %i)
-            print("norm Vector: %s" %normVector)
+        # Using broadcast to compute th product each row for the contextAxisMatrix by
+        # the prhaseVectorRow
+        phraseProjection = contextAxisMatrix * normContextAxisMatrix.dot(phraseVectorRow).reshape(-1, 1)
+        difference = phraseProjection - phraseVectorRow
+        normVector = np.linalg.norm(difference, axis=1).reshape(1, -1)
+
         return normVector
 
     
     def buildHMatrix(self,row):
         
-        print("row")
-        print(row)
         R = np.array(row)
-        print("R")
-        print(R)
         R.shape = (len(row), 1)
-        print("R shape")
-        print(R.shape)
         RT = R.T
-        print("RT")
-        print(RT)
         TRR = np.dot(RT, R)
-        print("TRR")
         print(TRR)
+        print(TRR.size)
         ITRR = np.linalg.inv(TRR)
-        print("ITRR")
-        print(ITRR)
         P = np.dot(R, ITRR)
-        print("P first time")
-        print(P)
         P = np.dot(P, RT)
-        print("P last time - product first time P and RT")
+        print("HMatrix")
         print(P)
+        print(P.size)
+        print("size in MB: %s" %(P.nbytes/1000000))
 
         return P
 
