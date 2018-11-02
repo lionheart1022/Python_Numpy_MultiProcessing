@@ -12,11 +12,5 @@ Calculate the phrase vector space and distances between phrase-context and phras
 
 import config
 from contextionaryAnalytics import WordVectorSpace
-from readingComprehensionAssistant import TextComprehension
 
 phraseSpace = WordVectorSpace(config.PARSE['distancePercentile'], config.PARSE['bondingIndexPercentile'])
-
-text = "mathematics is a form of knowledge."
-comprehension = TextComprehension(text, config.PARSE['topcontexts'])
-keywords = comprehension.findContext()
-print(keywords)
