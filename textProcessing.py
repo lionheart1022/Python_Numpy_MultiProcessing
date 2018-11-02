@@ -49,6 +49,7 @@ class TextProcessor(object):
         modifiedText = self.text.replace(",", ". .")
         modifiedText = modifiedText.replace(";", ". .")
         modifiedText = modifiedText.replace("(", ". .")
+        modifiedText = modifiedText.replace(")", ". .")
         
         """
         A very useful tool of Python is the sentence tokenizer that splits
@@ -91,7 +92,7 @@ class TextProcessor(object):
 
             wordSplit = [w for w in wordSplit if re.match("^[A-Za-z0-9_-]*$", w) and not w.startswith('-') and not w.endswith('-') and not w.startswith('_') and not w.endswith('_')]
 
-            self.wordOrderedList.extend(wordSplit)
+            
         
             
             """
@@ -108,6 +109,10 @@ class TextProcessor(object):
                     word = word.lower()
                     wordSplit[wordindex] = word
 
+
+            self.wordOrderedList.extend(wordSplit)
+            
+            
             from collections import Counter
             
             """
