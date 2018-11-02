@@ -27,15 +27,13 @@ def display(text):
     result = {}
     if '_' in text:
         text = text.replace('_', ' ')
-        comprehension = TextComprehension(text, config.PARSE['topcontexts'], config.PARSE['phraseLength'])
-        keywords = comprehension.findContext()
-        length = len(keywords)
+    comprehension = TextComprehension(text, config.PARSE['topcontexts'], config.PARSE['phraseLength'])
+    keywords = comprehension.findContext()
+    length = len(keywords)
 
-        for i in range(1, length+1):
-            result.update({'TOP CONTEXT {}'.format(i): str(keywords[i-1])})
-        return jsonify(result)
-
-    return ''
+    for i in range(1, length+1):
+        result.update({'TOP CONTEXT {}'.format(i): str(keywords[i-1])})
+    return jsonify(result)
 
 
 if __name__ == '__main__':
