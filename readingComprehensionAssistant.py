@@ -6,6 +6,7 @@ Created on Tue Jun  5 21:41:59 2018
 """
 
 import config
+import pandas as pd
 from psycopg2 import connect 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 
@@ -38,22 +39,39 @@ class TextComprehension(object):
         cur.execute(""" SELECT "context_id" FROM context;""")
         contextIDList = cur.fetchall()
 
-        
+        # initialize topContextsDict dictionary {<context id> : [<weighted sum>, <context level>, <context id>]}
+        topContextsDict = dict()
         for contextID in contextIDList:
-            self.topContexts.update({contextID[0]: 0})
+            topContextsDict.update({contextID[0]: list()})
         
-        for phraseLength in range(1, self.phraseMaxLength+1):
-            for phrase in self.phraseCount[phraseLength]:
-                cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s; """, ([phrase]))
-                phraseID = cur.fetchall()
-                if phraseID:
-                    for contextID in contextIDList:
+        # calculate weighted sum for each context and store in topContextsDict (along with corresponding context level and context id)
+        for contextID in contextIDList:
+            cur.execute("""SELECT "context_level" FROM "context" WHERE "context_id" = %s; """, [contextID[0]])
+            contextLevel = cur.fetchall()
+            weightedSum = 0
+            for phraseLength in range(1, self.phraseMaxLength+1):
+                for phrase in self.phraseCount[phraseLength]:
+                    cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s; """, ([phrase]))
+                    phraseID = cur.fetchall()
+                    if phraseID:
                         cur.execute("""SELECT "phrase_weight" FROM "phrase_weight_by_context" WHERE "phrase_id" = %s AND "context_id"=%s; """, [phraseID[0][0],contextID[0]])
                         weight = cur.fetchall()
                         if weight:
-                            self.topContexts[contextID[0]] = self.topContexts.get(contextID[0], 0) + weight[0][0] * self.phraseCount[phraseLength][phrase]
+                            weightedSum = weightedSum + float(weight[0][0]) * self.phraseCount[phraseLength][phrase]
+            topContextsDict[contextID[0]].extend([weightedSum, contextLevel[0][0], contextID[0]])
         
-
+        # convert topContextsDict to dataframe and sort (in descending order) by weighted sum, context level, and context id;
+        # for example, topContextsDataframe = 
+        #     weighted_sum  context_level  context_id
+        # 6      300              3           6
+        # 2      200              2           2
+        # 1      200              1           1
+        # 7      100              3           7
+        # 5      100              3           5
+        # 4      100              3           4
+        # 3      100              2           3
+        topContextsDataframe = pd.DataFrame.from_dict(topContextsDict, orient = 'index', columns = ['weighted_sum', 'context_level', 'context_id'])
+        topContextsDataframe = topContextsDataframe.sort_values(by = ['weighted_sum', 'context_level', 'context_id'], ascending = [False, True, False])
 
         """
         START FROM HERE
@@ -81,17 +99,20 @@ class TextComprehension(object):
         
         """
         
-        # extract all likelihood scores from dictionary (one for each context) and store in list
-        allLHScores = [v for k,v in self.topContexts.items()]
+        # if self.topCount > n contexts in contextionary, set self.topCount = n 
+        nContexts = len(contextIDList)
+        if self.topCount > nContexts:
+            self.topCount = nContexts
         
-        # sort all likelihood scores (largest to smallest)
-        allLHScores.sort(reverse=True)
+        # select the top contexts from topContextsDataframe and store in self.topContexts;
+        # note that this disctionary preserves the sorting logic of topContextsDataframe;
+        # for example, if self.topCount = 3, then self.topContexts = 
+        #     {6: 300,
+        #      2: 200,
+        #      1: 200}
         
-        # identify the likelihood score threshold that disqualifies a context from being classified as a "top context"
-        tooSmall = allLHScores[self.topCount]
-        
-        # reduce self.topContexts to only include contexts that are "top contexts"
-        self.topContexts = {k:v for k,v in self.topContexts.items() if v > tooSmall }
+        topContextsSeries = topContextsDataframe.iloc[0:self.topCount]['weighted_sum']
+        self.topContexts = pd.Series.to_dict(topContextsSeries)
 
         
         """
@@ -167,57 +188,47 @@ class TextComprehension(object):
                     nGramLocationDict.update({location_id: " ".join(self.phraseList[word_index: (word_index+length)])})  
             kewordLocationDict.update({length:nGramLocationDict})
         
-        # get sorted list of *unique* top likelihood scores (largest to smallest)
-        # for example, if self.topContexts = {1: Decimal('3'), 2: Decimal('5'), 7: Decimal('3')}, then topNLHScore = [5,3]
-        topNLHScore = list(set(allLHScores[0:self.topCount]))
-        topNLHScore.sort(reverse=True)
-        
         input_text_keywords = []
-        for likScore in topNLHScore: # for each unique top likelihood score:
+        for contextID in self.topContexts.keys(): # for each ordered top context:
+                
+            keywordDict = dict()
+            kw_id = 0
             
-            # get list of top contexts whose likelihood score is likScore
-            contextIDs = [k for k,v in self.topContexts.items() if v == likScore]
+            for kwText in inputTextSubphrases: # for each subphrase of input text:
+                
+                # get phrase ID
+                cur = con.cursor()
+                cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s; """, ([kwText]))
+                phraseID = cur.fetchall()
+                
+                if phraseID: # if input text subphrase is in contextionary...
+                    
+                    cur.execute(""" SELECT exists (SELECT 1 FROM "context_phrase" WHERE "context_id" = %s AND "phrase_id" = %s); """, ([contextID, phraseID[0]]))
+                    isContextPhrase = cur.fetchall()
+                    
+                    if isContextPhrase[0][0]: # ...and if input text subphrase is a context phrase:
+                        
+                        kw_id += 1
+                        
+                        phraseLength = len(kwText.split())
+                        nGramLocationDict = kewordLocationDict[phraseLength]
+                        startIndexList = [k for k,v in nGramLocationDict.items() if v == kwText]
+                        
+                        keywordLocation = []
+                        
+                        for startIndex in startIndexList:
+                            keywordLocation.append(set(range(startIndex, startIndex+phraseLength)))
+                            
+                        # store keyword attributes in keywordDict
+                        keywordDict.update({kw_id: {"keyword_location": keywordLocation, 
+                                                    "keyword_text": kwText, 
+                                                    "keyword_phrase_id": phraseID[0][0]}})
             
-            for contextID in contextIDs: # for each ordered top context:
-                
-                keywordDict = dict()
-                kw_id = 0
-                
-                for kwText in inputTextSubphrases: # for each subphrase of input text:
-                    
-                    # get phrase ID
-                    cur = con.cursor()
-                    cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_text" = %s; """, ([kwText]))
-                    phraseID = cur.fetchall()
-                    
-                    if phraseID: # if input text subphrase is in contextionary...
-                        
-                        cur.execute(""" SELECT exists (SELECT 1 FROM "context_phrase" WHERE "context_id" = %s AND "phrase_id" = %s); """, ([contextID, phraseID[0]]))
-                        isContextPhrase = cur.fetchall()
-                        
-                        if isContextPhrase[0][0]: # ...and if input text subphrase is a context phrase:
-                            
-                            kw_id += 1
-                            
-                            phraseLength = len(kwText.split())
-                            nGramLocationDict = kewordLocationDict[phraseLength]
-                            startIndexList = [k for k,v in nGramLocationDict.items() if v == kwText]
-                            
-                            keywordLocation = []
-                            
-                            for startIndex in startIndexList:
-                                keywordLocation.append(set(range(startIndex, startIndex+phraseLength)))
-                                
-                            # store keyword attributes in keywordDict
-                            keywordDict.update({kw_id: {"keyword_location": keywordLocation, 
-                                                        "keyword_text": kwText, 
-                                                        "keyword_phrase_id": phraseID[0][0]}})
-                
-                # store keywordDict in contextDict
-                contextDict = {contextID: keywordDict}
-                
-                # append contextDict to input_text_keywords
-                input_text_keywords.append(contextDict)     
+            # store keywordDict in contextDict
+            contextDict = {contextID: keywordDict}
+            
+            # append contextDict to input_text_keywords
+            input_text_keywords.append(contextDict)     
                             
                         
             
