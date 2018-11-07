@@ -12,10 +12,6 @@ The action will update the document table and the phrase meaning table (count pe
 for old context and count per context will increase for new context).
 """
 
-password = 'postgres'
-dbname = 'contextionary'
-usr = 'postgres'
-
 """
 The document class helps collect and file documents in the document table
 according to their context. Each document is assigned to a context.
@@ -29,6 +25,11 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from pathlib import Path
 import platform
 import config
+
+
+usr = config.DATABASE['user']
+password = config.DATABASE['password']
+dbname = config.DATABASE['dbname']
 
 
 class Document(object):
@@ -466,7 +467,7 @@ class Database(object):
 
     def add_contexts(self):
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
@@ -622,7 +623,7 @@ class Database(object):
 
         root = file_path.split(temp_name)[0]
         rootdirname = Path(root).parts[-1]
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -683,7 +684,7 @@ class Database(object):
         print(s1)
         table = input()
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -704,7 +705,7 @@ class Database(object):
 
     def delete_context(self, cont_for_del):
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -721,7 +722,7 @@ class Database(object):
 
     def delete_document(self, doc_id_for_del):
 
-        con = connect("dbname=contextionary user=postgres password='password'")
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -818,7 +819,7 @@ class Database(object):
 
     def delete_phrase(self, phrase_id_for_del):
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -829,7 +830,7 @@ class Database(object):
 
     def delete_phrase_origin(self, phrase_id_for_del, doc_id_for_del):
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -841,7 +842,7 @@ class Database(object):
 
     def delete_phrase_meaning(self, phrase_id_for_del, cont_id_for_del):
 
-        con = connect("dbname=contextionary user=postgres password=%s" % password)
+        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
