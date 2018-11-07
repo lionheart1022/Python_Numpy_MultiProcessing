@@ -30,14 +30,16 @@ tables including:
     - 
 """
 from psycopg2 import connect 
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
+#from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
+from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
 import config
 import numpy as np
 
 con = connect(dbname=config.DATABASE['dbname'],
               user=config.DATABASE['user'],
               password=config.DATABASE['password'])
-con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
+#con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
+con.set_isolation_level(ISOLATION_LEVEL_DEFAULT) 
 
 
 class WordVectorSpace(object):
@@ -75,6 +77,8 @@ class WordVectorSpace(object):
         cur = con.cursor()
         cur.execute(""" SELECT count(*) FROM context WHERE "context_children_id" = %s; """, (['0']),)                
         self.dimension = cur.fetchone()[0]
+        print("dimension")
+        print(self.dimension)
         self.distancePercentile = distancePercentile
         self.bondingIndexPercentile = bondingIndexPercentile
         
@@ -98,6 +102,8 @@ class WordVectorSpace(object):
         """
         phraseIDList: list of IDs of phrases as recorded in the --phrase-- table of the --contextionary-- database
         """
+        
+        
         print("create context dictionary....")
         self.createContextDictionary() 
         
@@ -116,6 +122,7 @@ class WordVectorSpace(object):
         print("create phrase lexical set....")
         self.createPhraseLexicalSet()
 
+        
         print("build phrase weight by context matrix....")
         self.buildPhraseWeightByContextMatrix()
 
@@ -201,6 +208,9 @@ class WordVectorSpace(object):
             
             phraseMeaningContextID = list([x[0] for x in phraseMeaningContextID])
             
+            print("list of contexts in phrase meaning table")
+            print(phraseMeaningContextID)
+            
             """
             For each context having phrases of varying lengths 1, 2, 3, etc.....
             to total number of phrases per length is updated in the phraseCount dictionary
@@ -212,13 +222,15 @@ class WordVectorSpace(object):
                 print(contextName)
                 #print("context ID from phrase meaning tabe: %s"%contextID)
                 cur = con.cursor()
+                print("Phrase lengths under review")
                 for phraseLength in phraseLengths:
+                    print(phraseLength)
                     cur = con.cursor()
                     cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_length" = %s; """, ([phraseLength]))
                     phraseID_phraseLength = cur.fetchall()
                     phraseID_phraseLength = tuple([x[0] for x in phraseID_phraseLength])
                     cur = con.cursor()
-                    print("context_id %s contains the following phrases of length %s phrase_ids :%s"%(contextID,phraseLength,phraseID_phraseLength))
+                    #print("context_id %s contains the following phrases of length %s phrase_ids :%s"%(contextID,phraseLength,phraseID_phraseLength))
                     cur.execute(""" SELECT "phrase_count_per_context" FROM "phrase_meaning" WHERE "phrase_id" IN %s AND "context_id" = %s; """, ([phraseID_phraseLength, contextID]))
                     pcpc = cur.fetchall()
                     pcpc = [x[0] for x in pcpc]
@@ -881,13 +893,6 @@ class WordVectorSpace(object):
                     """   
                 
                     if contextPhrase != relatedPhrase:
-                        
-                        counter2 += 1
-                        
-                        if counter2 % 100 == 0:
-                            print("related phrase")
-                            print(relatedPhrase.getText())
-                            print(counter2)
 
                         """
                         Under the if condition above, define relatedPhraseDocumentCount by calculating 
@@ -904,7 +909,26 @@ class WordVectorSpace(object):
                         
                         sharedDocument=set(contextPhraseDocument).intersection(relatedPhraseDocument)
                         sharedDocumentCount = len(sharedDocument)
-
+                        
+                        if(contextPhraseDocumentCount+relatedPhraseDocumentCount-sharedDocumentCount):
+                        
+                            print("SharedDocumentCount: %s" %sharedDocumentCount)
+                            
+                            print("context phrase: %s . related phrase: %s" %(contextPhrase.getText(),relatedPhrase.getText()))
+                            
+                            print("These 2 phrases share no document together.")
+                            
+                            print("contextPhraseDocumentCount: %s" %contextPhraseDocumentCount)
+                            if contextPhraseDocumentCount==0:
+                                print("context phrase appears in no document")
+                            
+                            print("relatedPhraseDocumentCount: %s" %relatedPhraseDocumentCount)
+                            if relatedPhraseDocumentCount==0:
+                                print("related phrase appears in no document")
+                        
+                        
+                        
+                        
                         phraseBondingIndex = sharedDocumentCount/(contextPhraseDocumentCount+relatedPhraseDocumentCount-sharedDocumentCount)
                      
                         contextPhraseLexicalSet.update({relatedPhrase:phraseBondingIndex})
