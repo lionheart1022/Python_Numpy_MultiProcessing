@@ -30,16 +30,16 @@ tables including:
     - 
 """
 from psycopg2 import connect 
-#from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
-from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
+#from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
 import config
 import numpy as np
 
 con = connect(dbname=config.DATABASE['dbname'],
               user=config.DATABASE['user'],
               password=config.DATABASE['password'])
-#con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
-con.set_isolation_level(ISOLATION_LEVEL_DEFAULT) 
+con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
+#con.set_isolation_level(ISOLATION_LEVEL_DEFAULT) 
 
 
 class WordVectorSpace(object):
@@ -208,8 +208,7 @@ class WordVectorSpace(object):
             
             phraseMeaningContextID = list([x[0] for x in phraseMeaningContextID])
             
-            print("list of contexts in phrase meaning table")
-            print(phraseMeaningContextID)
+            
             
             """
             For each context having phrases of varying lengths 1, 2, 3, etc.....
@@ -219,6 +218,8 @@ class WordVectorSpace(object):
             phraseLengths = cur.fetchall()
             phraseLengths = list([x[0] for x in phraseLengths])
             if contextID in phraseMeaningContextID:
+                #print("list of contexts in phrase meaning table")
+                #print(phraseMeaningContextID)
                 print(contextName)
                 #print("context ID from phrase meaning tabe: %s"%contextID)
                 cur = con.cursor()
@@ -319,7 +320,7 @@ class WordVectorSpace(object):
         """
 
         cur = con.cursor()
-        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=10;""")
+        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=1000;""")
         phraseIDList = cur.fetchall()
         
         print("how many phrases should we deal with?")
@@ -582,27 +583,6 @@ class WordVectorSpace(object):
         Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
         --contextionary-- database
         """    
-        
-        #insertdistanceindatabaseStarttime=time.time()
-        
-        #counter = 0
-        
-        #for phraseID in self.phrases.keys():
-        #    counter += 1
-        #    if counter % 1000:
-        #        print(counter)
-        #        print("Phrase: %s" % phraseID)
-        #    i = self.phrases[phraseID].getIndex()
-        #    for contextID in self.contexts.keys():
-        #        j = self.contexts[contextID].getRCIndex()
-        #        cur = con.cursor()
-        #
-        #        cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
-        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
-        
-        #insertdistanceindatabaseEndtime=time.time()
-        
-        #print("Time to insert phrase distance to context into database: %s" %(insertdistanceindatabaseStarttime-insertdistanceindatabaseEndtime))
         
         print("distance to context matrix")
         print(self.distanceToContextMatrix)
@@ -881,7 +861,7 @@ class WordVectorSpace(object):
                 Define contextPhraseDocumentCount by calculating its integer value from the
                 "phrase origin" table
                 """
-                counter2 = 0
+                #counter2 = 0
                 contextPhraseDocument = contextPhrase.getDocumentPerContext()[context.getRCIndex()]
                 contextPhraseDocumentCount = len(contextPhraseDocument)
                 
@@ -937,7 +917,7 @@ class WordVectorSpace(object):
                 Calculate the 90% percentile of the contextPhraseLexicalSet values.
                 It is assumed here that 90% of the connections between a phrase and others are not strong enough.
                 """
-                import numpy as np
+                #import numpy as np
                 ######### revised 06/03/2018
                 lst = list(contextPhraseLexicalSet.values())
                 if lst:
