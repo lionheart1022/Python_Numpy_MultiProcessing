@@ -10,7 +10,8 @@ import pandas as pd
 from psycopg2 import connect 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 
-con = connect(dbname=config.DATABASE['dbname'],
+con = connect(host=config.DATABASE['host'],
+              dbname=config.DATABASE['dbname'],
               user=config.DATABASE['user'],
               password=config.DATABASE['password'])
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)

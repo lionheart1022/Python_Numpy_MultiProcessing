@@ -30,6 +30,7 @@ import config
 usr = config.DATABASE['user']
 password = config.DATABASE['password']
 dbname = config.DATABASE['dbname']
+host = config.DATABASE['host']
 
 
 class Document(object):
@@ -89,7 +90,7 @@ class Document(object):
 
     def updatePhraseTables(self):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
@@ -124,7 +125,7 @@ class Document(object):
 
     def updatePhraseOrigin(self, phrase_id, phrase, length):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -151,7 +152,7 @@ class Document(object):
 
     def updatePhraseMeaning(self, phr_id):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -259,6 +260,7 @@ class Database(object):
         self.usr = config.DATABASE['user']
         self.password = config.DATABASE['password']
         self.dbname = config.DATABASE['dbname']
+        self.host = config.DATABASE['host']
 
         self.libraryName = libraryName
         self.phraseMaximumLength = phraseMaximumLength
@@ -274,7 +276,7 @@ class Database(object):
             self.add_contexts()
 
     def database_exist(self):
-        con = connect(user=self.usr, host='localhost', password=self.password)
+        con = connect(user=self.usr, host=self.host, password=self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
@@ -287,7 +289,7 @@ class Database(object):
 
     def create(self):
 
-        con = connect(user=self.usr, host='localhost', password=self.password)
+        con = connect(user=self.usr, host=self.host, password=self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
@@ -306,7 +308,7 @@ class Database(object):
 
     def create_tables(self):
 
-        con = connect("dbname=" + self.dbname + " user=" + self.usr + " password=" + self.password)
+        con = connect(dbname=self.dbname, user=self.usr, host=self.host, password=self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -467,7 +469,7 @@ class Database(object):
 
     def add_contexts(self):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
@@ -623,7 +625,7 @@ class Database(object):
 
         root = file_path.split(temp_name)[0]
         rootdirname = Path(root).parts[-1]
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -684,7 +686,7 @@ class Database(object):
         print(s1)
         table = input()
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -705,7 +707,7 @@ class Database(object):
 
     def delete_context(self, cont_for_del):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -722,7 +724,7 @@ class Database(object):
 
     def delete_document(self, doc_id_for_del):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -819,7 +821,7 @@ class Database(object):
 
     def delete_phrase(self, phrase_id_for_del):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -830,7 +832,7 @@ class Database(object):
 
     def delete_phrase_origin(self, phrase_id_for_del, doc_id_for_del):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -842,7 +844,7 @@ class Database(object):
 
     def delete_phrase_meaning(self, phrase_id_for_del, cont_id_for_del):
 
-        con = connect("dbname=%s user=%s password=%s" % (dbname, usr, password))
+        con = connect("host=%s dbname=%s user=%s password=%s" % (host, dbname, usr, password))
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
 
@@ -854,7 +856,7 @@ class Database(object):
 
     def drop(self):
 
-        con = connect(user=self.usr, host='localhost', password=self.password)
+        con = connect(user=self.usr, host=self.host, password=self.password)
         dbname = self.dbname
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
@@ -876,8 +878,7 @@ class Database(object):
 
         print('Please provide the new context name')
         new_cont_name = input()
-
-        con = connect("dbname=" + self.dbname + " user=" + self.usr + " password=" + self.password)
+        con = connect(dbname=self.dbname, user=self.usr, host=self.host, password=self.password)
         con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = con.cursor()
         try:
