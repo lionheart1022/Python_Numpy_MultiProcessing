@@ -31,15 +31,14 @@ tables including:
 """
 from psycopg2 import connect 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
-#from psycopg2.extensions import ISOLATION_LEVEL_DEFAULT
 import config
 import numpy as np
 
-con = connect(dbname=config.DATABASE['dbname'],
+con = connect(host=config.DATABASE['host'],
+              dbname=config.DATABASE['dbname'],
               user=config.DATABASE['user'],
               password=config.DATABASE['password'])
 con.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT) 
-#con.set_isolation_level(ISOLATION_LEVEL_DEFAULT) 
 
 
 class WordVectorSpace(object):
@@ -77,8 +76,6 @@ class WordVectorSpace(object):
         cur = con.cursor()
         cur.execute(""" SELECT count(*) FROM context WHERE "context_children_id" = %s; """, (['0']),)                
         self.dimension = cur.fetchone()[0]
-        print("dimension")
-        print(self.dimension)
         self.distancePercentile = distancePercentile
         self.bondingIndexPercentile = bondingIndexPercentile
         
@@ -102,12 +99,8 @@ class WordVectorSpace(object):
         """
         phraseIDList: list of IDs of phrases as recorded in the --phrase-- table of the --contextionary-- database
         """
-        
-        
         print("create context dictionary....")
         self.createContextDictionary() 
-        
-        
         print("create phrase dictionary....")
         self.createPhraseDictionary() 
         print("create phrase vector space matrix....")
@@ -122,11 +115,10 @@ class WordVectorSpace(object):
         print("create phrase lexical set....")
         self.createPhraseLexicalSet()
 
-        
         print("build phrase weight by context matrix....")
         self.buildPhraseWeightByContextMatrix()
 
-        
+        """
         print("update shared word....")
         self.updateSharedWord()
         print("update context spelling similarity....")
@@ -135,7 +127,7 @@ class WordVectorSpace(object):
         self.updatePhraseSpellingSimilarity()
         print("update frequency distance table....")
         self.updateFrequencyDistanceTable()
-        
+        """
 
     """
     createContextDictionary method creates a Python dictionary {key:value} in which each entry will have
@@ -177,7 +169,7 @@ class WordVectorSpace(object):
             cur.execute(""" SELECT "context_name" FROM context WHERE "context_id" = %s; """, ([contextID]))
             contextName = cur.fetchall()[0][0]
             
-            #print(contextName)
+            print(contextName)
                         
             """
             Create the list of ancestors ID of a context called --ancestorsID--.
@@ -208,8 +200,6 @@ class WordVectorSpace(object):
             
             phraseMeaningContextID = list([x[0] for x in phraseMeaningContextID])
             
-            
-            
             """
             For each context having phrases of varying lengths 1, 2, 3, etc.....
             to total number of phrases per length is updated in the phraseCount dictionary
@@ -218,20 +208,13 @@ class WordVectorSpace(object):
             phraseLengths = cur.fetchall()
             phraseLengths = list([x[0] for x in phraseLengths])
             if contextID in phraseMeaningContextID:
-                #print("list of contexts in phrase meaning table")
-                #print(phraseMeaningContextID)
-                print(contextName)
-                #print("context ID from phrase meaning tabe: %s"%contextID)
                 cur = con.cursor()
-                print("Phrase lengths under review")
                 for phraseLength in phraseLengths:
-                    print(phraseLength)
                     cur = con.cursor()
                     cur.execute(""" SELECT "phrase_id" FROM phrase WHERE "phrase_length" = %s; """, ([phraseLength]))
                     phraseID_phraseLength = cur.fetchall()
                     phraseID_phraseLength = tuple([x[0] for x in phraseID_phraseLength])
                     cur = con.cursor()
-                    #print("context_id %s contains the following phrases of length %s phrase_ids :%s"%(contextID,phraseLength,phraseID_phraseLength))
                     cur.execute(""" SELECT "phrase_count_per_context" FROM "phrase_meaning" WHERE "phrase_id" IN %s AND "context_id" = %s; """, ([phraseID_phraseLength, contextID]))
                     pcpc = cur.fetchall()
                     pcpc = [x[0] for x in pcpc]
@@ -293,11 +276,11 @@ class WordVectorSpace(object):
                 UPDATE ANCESTORS PHRASE COUNT
                 """
                 context.updateAncestorPhraseCount(context.getPhraseCount(),ancestors)
-        #print("Context Human activity and its independent descendants")
+        print("Context Human activity and its independent descendants")
         #print(contextID)
-        #print(self.contexts[1].getIndependentDescendantsID())
-        #print("Context Belief and its independent descendants")
-        #print(self.contexts[2].getIndependentDescendantsID())
+        print(self.contexts[1].getIndependentDescendantsID())
+        print("Context Belief and its independent descendants")
+        print(self.contexts[2].getIndependentDescendantsID())
 
     """
     createPhraseDictionary method creates a Python dictionary {key:value} in which each entry will have
@@ -320,7 +303,7 @@ class WordVectorSpace(object):
         """
 
         cur = con.cursor()
-        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=1000;""")
+        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=10;""")
         phraseIDList = cur.fetchall()
         
         print("how many phrases should we deal with?")
@@ -583,6 +566,27 @@ class WordVectorSpace(object):
         Insert entries phrase i, context j, distance ij into the "phrase distance to context" table of the
         --contextionary-- database
         """    
+        
+        #insertdistanceindatabaseStarttime=time.time()
+        
+        #counter = 0
+        
+        #for phraseID in self.phrases.keys():
+        #    counter += 1
+        #    if counter % 1000:
+        #        print(counter)
+        #        print("Phrase: %s" % phraseID)
+        #    i = self.phrases[phraseID].getIndex()
+        #    for contextID in self.contexts.keys():
+        #        j = self.contexts[contextID].getRCIndex()
+        #        cur = con.cursor()
+        #
+        #        cur.execute("""INSERT INTO "phrase_distance_to_context" ("phrase_id", "context_id", "phrase_distance_to_context")
+        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.distanceToContextMatrix[i][j]]))
+        
+        #insertdistanceindatabaseEndtime=time.time()
+        
+        #print("Time to insert phrase distance to context into database: %s" %(insertdistanceindatabaseStarttime-insertdistanceindatabaseEndtime))
         
         print("distance to context matrix")
         print(self.distanceToContextMatrix)
@@ -861,7 +865,7 @@ class WordVectorSpace(object):
                 Define contextPhraseDocumentCount by calculating its integer value from the
                 "phrase origin" table
                 """
-                #counter2 = 0
+                counter2 = 0
                 contextPhraseDocument = contextPhrase.getDocumentPerContext()[context.getRCIndex()]
                 contextPhraseDocumentCount = len(contextPhraseDocument)
                 
@@ -873,6 +877,13 @@ class WordVectorSpace(object):
                     """   
                 
                     if contextPhrase != relatedPhrase:
+                        
+                        counter2 += 1
+                        
+                        if counter2 % 100 == 0:
+                            print("related phrase")
+                            print(relatedPhrase.getText())
+                            print(counter2)
 
                         """
                         Under the if condition above, define relatedPhraseDocumentCount by calculating 
@@ -889,26 +900,7 @@ class WordVectorSpace(object):
                         
                         sharedDocument=set(contextPhraseDocument).intersection(relatedPhraseDocument)
                         sharedDocumentCount = len(sharedDocument)
-                        
-                        if(contextPhraseDocumentCount+relatedPhraseDocumentCount-sharedDocumentCount):
-                        
-                            print("SharedDocumentCount: %s" %sharedDocumentCount)
-                            
-                            print("context phrase: %s . related phrase: %s" %(contextPhrase.getText(),relatedPhrase.getText()))
-                            
-                            print("These 2 phrases share no document together.")
-                            
-                            print("contextPhraseDocumentCount: %s" %contextPhraseDocumentCount)
-                            if contextPhraseDocumentCount==0:
-                                print("context phrase appears in no document")
-                            
-                            print("relatedPhraseDocumentCount: %s" %relatedPhraseDocumentCount)
-                            if relatedPhraseDocumentCount==0:
-                                print("related phrase appears in no document")
-                        
-                        
-                        
-                        
+
                         phraseBondingIndex = sharedDocumentCount/(contextPhraseDocumentCount+relatedPhraseDocumentCount-sharedDocumentCount)
                      
                         contextPhraseLexicalSet.update({relatedPhrase:phraseBondingIndex})
@@ -917,7 +909,7 @@ class WordVectorSpace(object):
                 Calculate the 90% percentile of the contextPhraseLexicalSet values.
                 It is assumed here that 90% of the connections between a phrase and others are not strong enough.
                 """
-                #import numpy as np
+                import numpy as np
                 ######### revised 06/03/2018
                 lst = list(contextPhraseLexicalSet.values())
                 if lst:
