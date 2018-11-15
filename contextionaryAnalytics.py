@@ -126,7 +126,7 @@ class WordVectorSpace(object):
         print("build phrase weight by context matrix....")
         self.buildPhraseWeightByContextMatrix()
 
-        """
+        
         print("update shared word....")
         self.updateSharedWord()
         print("update context spelling similarity....")
@@ -135,7 +135,7 @@ class WordVectorSpace(object):
         self.updatePhraseSpellingSimilarity()
         print("update frequency distance table....")
         self.updateFrequencyDistanceTable()
-        """
+        
 
     """
     createContextDictionary method creates a Python dictionary {key:value} in which each entry will have
@@ -326,7 +326,7 @@ class WordVectorSpace(object):
         """
 
         cur = con.cursor()
-        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=1000;""")
+        cur.execute(""" SELECT DISTINCT "phrase_id" FROM "phrase_meaning" WHERE "phrase_count_per_context">=3;""")
         phraseIDList = cur.fetchall()
         
         print("how many phrases should we deal with?")
@@ -717,13 +717,13 @@ class WordVectorSpace(object):
         --contextionary-- database
         """    
 
-        for phraseID in self.phrases.keys():
-            i = self.phrases[phraseID].getIndex()
-            for contextID in self.contexts.keys():
-                j = self.contexts[contextID].getRCIndex()
-                cur = con.cursor()
-                cur.execute("""INSERT INTO "phrase_weight_by_context" ("phrase_id", "context_id", "phrase_weight")
-                VALUES (%s,%s,%s)""", ([phraseID, contextID, self.phraseWeightByContextMatrix[i][j]]))
+        #for phraseID in self.phrases.keys():
+        #    i = self.phrases[phraseID].getIndex()
+        #    for contextID in self.contexts.keys():
+        #        j = self.contexts[contextID].getRCIndex()
+        #        cur = con.cursor()
+        #        cur.execute("""INSERT INTO "phrase_weight_by_context" ("phrase_id", "context_id", "phrase_weight")
+        #        VALUES (%s,%s,%s)""", ([phraseID, contextID, self.phraseWeightByContextMatrix[i][j]]))
 
         
         """
@@ -920,6 +920,16 @@ class WordVectorSpace(object):
                             print("relatedPhraseDocumentCount: %s" %relatedPhraseDocumentCount)
                             if relatedPhraseDocumentCount==0:
                                 print("related phrase appears in no document")
+                            
+                            """
+                            FIXING AN ANOMALY.
+                            IF THE DATABASE INTEGRITY WAS COMPROMISED, IT WILL HAPPEN THAT contextPhraseDocumentCount=0
+                            0 IS NOT A LOGICAL VALUE FOR THIS VARIABLE.
+                            TO CORRECT THE ANOMALY, WE WILL ASSIGN AN INCORRECT BUT MORE PLAUSIBLE VALUE TO THE
+                            VARIABLE AND THAT VALUE WILL BE 1.
+                            THEREFORE, WE WILL NOT EXPECT A DIVISION BY ZERO ANYMORE.
+                            """
+                            contextPhraseDocumentCount=1
                         
                         
                         
