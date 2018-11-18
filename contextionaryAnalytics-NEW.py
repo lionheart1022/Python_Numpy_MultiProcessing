@@ -88,17 +88,23 @@ class WordVectorSpace(object):
         self.contextVolumeByPhraseLength=dict()
         self.contextDatabase=dict()
         
-        # importing csv module 
+         # importing csv module 
         import csv
         
     
         with open('phraseCountPerDocument.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            self.phraseCountPerDocument = {(int(rows[0]),int(rows[1]),int(rows[3])):int(rows[4]) for rows in reader}            
-       
+            try:
+                reader = csv.reader(csv_file)    
+                self.phraseCountPerDocument = {(int(rows[0]),int(rows[1]),int(rows[3])):int(rows[4]) for rows in reader}            
+            finally:
+                csv_file.close
+                
         with open('phraseCountPerDocument.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            self.phraseCountPerContext = {(int(rows[0]),int(rows[1])):0 for rows in reader}
+            try:
+                reader = csv.reader(csv_file)    
+                self.phraseCountPerContext = {(int(rows[0]),int(rows[1])):0 for rows in reader}
+            finally:
+                csv_file.close
             
         for dockey in self.phraseCountPerDocument.keys():
             phrasekey=dockey[:-1]
@@ -109,13 +115,19 @@ class WordVectorSpace(object):
         context volume by phrase length
         """
         with open('phraseCountPerDocument.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            self.phraseCountPerDocument_length = {(int(rows[0]),int(rows[2]),int(rows[1]),int(rows[3])):int(rows[4]) for rows in reader}            
-       
+            try:
+                reader = csv.reader(csv_file)    
+                self.phraseCountPerDocument_length = {(int(rows[0]),int(rows[2]),int(rows[1]),int(rows[3])):int(rows[4]) for rows in reader}            
+            finally:
+                csv_file.close
+                
         with open('phraseCountPerDocument.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            self.contextVolumeByPhraseLength = {(int(rows[0]),int(rows[2])):0 for rows in reader}
-            
+            try:
+                reader = csv.reader(csv_file)    
+                self.contextVolumeByPhraseLength = {(int(rows[0]),int(rows[2])):0 for rows in reader}
+            finally:
+                csv_file.close
+                
         for dockey in self.phraseCountPerDocument_length.keys():
             volumekey=dockey[:-2]
             self.contextVolumeByPhraseLength[volumekey]+=self.phraseCountPerDocument_length[dockey]
@@ -141,10 +153,12 @@ class WordVectorSpace(object):
         column 6   = rcindex
         """
         with open('context.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            next(reader)
-            self.contextDatabase = {int(rows[0]):[int(rows[1]),rows[2],rows[3],rows[4],int(rows[5]),int(rows[6]),int(rows[7])] for rows in reader}  
-  
+            try:
+                reader = csv.reader(csv_file)    
+                next(reader)
+                self.contextDatabase = {int(rows[0]):[int(rows[1]),rows[2],rows[3],rows[4],int(rows[5]),int(rows[6]),int(rows[7])] for rows in reader}  
+            finally:
+                csv_file.close 
         
         """
         phrase csv file contains all the phrase attributes with:
@@ -155,10 +169,12 @@ class WordVectorSpace(object):
         column 3   = phrase_index
         """
         with open('phrase.csv', 'r') as csv_file:
-            reader = csv.reader(csv_file)    
-            next(reader)
-            self.phraseDatabase = {int(rows[0]):[rows[1],int(rows[2]),int(rows[3]),int(rows[4])] for rows in reader}  
-  
+            try:
+                reader = csv.reader(csv_file)    
+                next(reader)
+                self.phraseDatabase = {int(rows[0]):[rows[1],int(rows[2]),int(rows[3]),int(rows[4])] for rows in reader}  
+            finally:
+                csv_file.close
         
         
             
@@ -390,7 +406,7 @@ class WordVectorSpace(object):
         phraseIDList: list of IDs of phrases as recorded in the --phrase-- table of the --contextionary-- database
         """
         
-        highCountPhrase=dict((k, v) for k, v in self.phraseCountPerContext.items() if v >=10)
+        highCountPhrase=dict((k, v) for k, v in self.phraseCountPerContext.items() if v >=25)
         l=list(highCountPhrase)
         print(l)
         phraseIDList=list(set([x[1] for x in l]))
@@ -421,6 +437,7 @@ class WordVectorSpace(object):
         for phraseID in phraseIDList:
 
             compteur += 1
+            print("%s phrases completed out of %s"%(compteur,len(phraseIDList)))
             phraseText=self.phraseDatabase[phraseID][0]
             phraseLength=self.phraseDatabase[phraseID][1]
             self.phraseDatabase[phraseID][3]=index                  
@@ -837,7 +854,7 @@ class WordVectorSpace(object):
         
 
         for contextID in independentContextID:
-            contextID = contextID[0]
+            #contextID = contextID[0]
             context = self.contexts[contextID]
             lexicalSet = dict()
             for phraseID in self.phrases.keys():
@@ -871,7 +888,7 @@ class WordVectorSpace(object):
             #phraseID=phraseID[0]
             phrase = self.phrases[phraseID]
             for contextID in dependentContextID:
-                contextID = contextID[0]
+                #contextID = contextID[0]
                 context = self.contexts[contextID]
                 ancestorsID = context.getAncestorsID()
                 #lexicalSet=dict()
