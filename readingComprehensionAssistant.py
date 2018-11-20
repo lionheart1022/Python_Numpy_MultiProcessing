@@ -6,6 +6,7 @@ Created on Tue Jun  5 21:41:59 2018
 """
 
 import config
+import time
 from psycopg2 import connect 
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT 
 
@@ -40,8 +41,11 @@ class TextComprehension(object):
         
         import numpy as np
         #from numpy import genfromtxt
-        phraseWeightByContextMatrix = np.genfromtxt('phraseWeightByContextMatrix.csv', delimiter=',')
 
+        start_time = time.time()
+        phraseWeightByContextMatrix = np.genfromtxt('phraseWeightByContextMatrix.csv', delimiter=',')
+        end_time = time.time()
+        print("time to read from phrase weight matrix csv file: %s" % (str(end_time - start_time)))
         print("")
         print("phrase weight by context matrix")
         print(phraseWeightByContextMatrix)
@@ -51,6 +55,7 @@ class TextComprehension(object):
         phraseCountArray=np.zeros(phraseArraySize)
          
         cur = con.cursor()
+        start_time = time.time()
         for phraseLength in range(1, self.phraseMaxLength+1):
             for phrase in self.phraseCount[phraseLength]:
                 
@@ -59,7 +64,8 @@ class TextComprehension(object):
                 if phrase_index:
                     phraseCountArray[phrase_index]=self.phraseCount[phraseLength][phrase]
                     #print("phrase: %s, count: %s" %(phrase,self.phraseCount[phraseLength][phrase]))
-        
+        end_time = time.time()
+        print("time to execute for loop and get phrase_index from table phrase: %s" % (str(end_time - start_time)))
         print("")
         print("input text phrase count")
         print(phraseCountArray)
@@ -74,18 +80,18 @@ class TextComprehension(object):
         
         print(topRCIndex)
         
-        
+        start_time = time.time()
         for i in range(self.topCount):
             rcindex=topRCIndex[i]
             #print(rcindex)
             cur.execute(""" SELECT "context_id" FROM context WHERE "rcindex" = %s; """, ([rcindex]))
             contextID = cur.fetchall()
             self.topContexts.update({contextID[0][0]: textWeights[topRCIndex[i]]})
-        
         print("")
         print("list of top contexts with corresponding weights:")
         print(self.topContexts)
-    
+        end_time = time.time()
+        print("time to execute for loop and get top contexts from context table: %s" % (str(end_time - start_time)))
         
         
         
@@ -108,6 +114,7 @@ class TextComprehension(object):
         #     3: {1: 'a b a', 2: 'b a b'},
         #     4: {1: 'a b a b'}}
         kewordLocationDict = dict()
+        start_time = time.time()
         maxLength = min([len(self.phraseList), self.phraseMaxLength])
         for length in range(1, maxLength+1):
             location_id = 0
@@ -117,6 +124,8 @@ class TextComprehension(object):
                 if word_index+length <= len(self.phraseList):
                     nGramLocationDict.update({location_id: " ".join(self.phraseList[word_index: (word_index+length)])})  
             kewordLocationDict.update({length:nGramLocationDict})
+        end_time = time.time()
+        print("Time to update keyword location dictionary: %s" % (str(end_time - start_time)))
         
         # get sorted list of *unique* top likelihood scores (largest to smallest)
         # for example, if self.topContexts = {1: Decimal('3'), 2: Decimal('5'), 7: Decimal('3')}, then topNLHScore = [5,3]
@@ -124,6 +133,7 @@ class TextComprehension(object):
         topNLHScore.sort(reverse=True)
         
         input_text_keywords = []
+        start_time = time.time()
         for likScore in topNLHScore: # for each unique top likelihood score:
             
             # get list of top contexts whose likelihood score is likScore
@@ -168,7 +178,9 @@ class TextComprehension(object):
                 contextDict = {contextID: keywordDict}
                 
                 # append contextDict to input_text_keywords
-                input_text_keywords.append(contextDict)   
+                input_text_keywords.append(contextDict)
+        end_time = time.time()
+        print("Time to update input test keyword list: %s" % (str(end_time - start_time)))
         
         print("")
         print("ordered list of contexts with keywords")
