@@ -43,12 +43,16 @@ class TextComprehension(object):
         #from numpy import genfromtxt
 
         start_time = time.time()
-        phraseWeightByContextMatrix = np.genfromtxt('phraseWeightByContextMatrix.csv', delimiter=',')
+        #phraseWeightByContextMatrix = np.genfromtxt('phraseWeightByContextMatrix.csv', delimiter=',')
+        phraseWeightByContextMatrix=np.load('phraseWeightByContextMatrix.npy')
         end_time = time.time()
         print("time to read from phrase weight matrix csv file: %s" % (str(end_time - start_time)))
         print("")
         print("phrase weight by context matrix")
         print(phraseWeightByContextMatrix)
+        
+        
+        #np.save('phraseWeightByContextMatrix.npy', phraseWeightByContextMatrix)
         
         phraseArraySize=len(phraseWeightByContextMatrix)
         
@@ -66,19 +70,19 @@ class TextComprehension(object):
                     #print("phrase: %s, count: %s" %(phrase,self.phraseCount[phraseLength][phrase]))
         end_time = time.time()
         print("time to execute for loop and get phrase_index from table phrase: %s" % (str(end_time - start_time)))
-        print("")
-        print("input text phrase count")
-        print(phraseCountArray)
+        #print("")
+        #print("input text phrase count")
+        #print(phraseCountArray)
         
         textWeights=np.dot(phraseWeightByContextMatrix.transpose(),phraseCountArray.transpose())
         print("")
-        print("input text weights by context. Total independent context is %s" %len(textWeights))
-        print(textWeights)
+        #print("input text weights by context. Total independent context is %s" %len(textWeights))
+        #print(textWeights)
         
         
         topRCIndex=list(sorted(range(len(textWeights)), key=lambda i: textWeights[i])[-self.topCount:])
         
-        print(topRCIndex)
+        #print(topRCIndex)
         
         start_time = time.time()
         for i in range(self.topCount):
@@ -88,8 +92,8 @@ class TextComprehension(object):
             contextID = cur.fetchall()
             self.topContexts.update({contextID[0][0]: textWeights[topRCIndex[i]]})
         print("")
-        print("list of top contexts with corresponding weights:")
-        print(self.topContexts)
+        #print("list of top contexts with corresponding weights:")
+        #print(self.topContexts)
         end_time = time.time()
         print("time to execute for loop and get top contexts from context table: %s" % (str(end_time - start_time)))
         
@@ -182,9 +186,9 @@ class TextComprehension(object):
         end_time = time.time()
         print("Time to update input test keyword list: %s" % (str(end_time - start_time)))
         
-        print("")
-        print("ordered list of contexts with keywords")
-        print(input_text_keywords)
+        #print("")
+        #print("ordered list of contexts with keywords")
+        #print(input_text_keywords)
         return(input_text_keywords)
          
 
